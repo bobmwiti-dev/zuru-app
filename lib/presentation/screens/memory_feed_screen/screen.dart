@@ -387,16 +387,19 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     switch (index) {
       case 0: // Feed - already here
         break;
-      case 1: // Map
+      case 1: // Friends
+        Navigator.pushNamed(context, '/friends-screen');
+        break;
+      case 2: // Map
         Navigator.pushNamed(context, '/interactive-map-view');
         break;
-      case 2: // Add (handled by FAB)
+      case 3: // Add (handled by FAB)
         break;
-      case 3: // Analytics
+      case 4: // Analytics
         Navigator.pushNamed(context, '/mood-analytics-screen');
         break;
-      case 4: // Profile
-        Navigator.pushNamed(context, '/authentication-screen');
+      case 5: // Profile
+        Navigator.pushNamed(context, '/profile-screen');
         break;
     }
   }
@@ -642,12 +645,10 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
 
   /// Handle share action
   void _handleShare(Map<String, dynamic> entry) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sharing "${entry["title"]}"...'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    Navigator.pushNamed(
+      context,
+      '/share-screen',
+      arguments: {'memory': entry},
     );
   }
 

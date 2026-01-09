@@ -5,6 +5,11 @@ import 'package:zuru_app/presentation/screens/journal_detail_screen/screen.dart'
 import 'package:zuru_app/presentation/screens/authentication_screen/screen.dart';
 import 'package:zuru_app/presentation/screens/interactive_map_view_screen/screen.dart';
 import 'package:zuru_app/presentation/screens/add_journal_screen/screen.dart';
+import 'package:zuru_app/presentation/screens/profile_screen/screen.dart';
+import 'package:zuru_app/presentation/screens/settings_screen/screen.dart';
+import 'package:zuru_app/presentation/screens/share_screen/screen.dart';
+import 'package:zuru_app/presentation/screens/friends_screen/screen.dart';
+import 'package:zuru_app/presentation/screens/ai_insights_screen/screen.dart';
 
 class AppRoutes {
   // Route names
@@ -15,10 +20,15 @@ class AppRoutes {
   static const String authentication = '/authentication-screen';
   static const String interactiveMapView = '/interactive-map-view';
   static const String addJournal = '/add-journal-screen';
+  static const String profile = '/profile-screen';
+  static const String settings = '/settings-screen';
+  static const String share = '/share-screen';
+  static const String friends = '/friends-screen';
+  static const String aiInsights = '/ai-insights-screen';
 
   // Route generator
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
+  static Route<dynamic> generateRoute(RouteSettings routeSettings) {
+    switch (routeSettings.name) {
       case initial:
         return MaterialPageRoute(builder: (_) => const MemoryFeedScreen());
       case memoryFeed:
@@ -35,12 +45,25 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const InteractiveMapView());
       case addJournal:
         return MaterialPageRoute(builder: (_) => const AddJournalScreen());
+      case profile:
+        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+      case settings:
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
+      case share:
+        final args = routeSettings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => ShareScreen(memory: args?['memory'] ?? {}),
+        );
+      case friends:
+        return MaterialPageRoute(builder: (_) => const FriendsScreen());
+      case aiInsights:
+        return MaterialPageRoute(builder: (_) => const AIInsightsScreen());
       default:
         // Handle 404 - Page not found
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             body: Center(
-              child: Text('No route defined for ${settings.name}'),
+              child: Text('No route defined for ${routeSettings.name}'),
             ),
           ),
         );
