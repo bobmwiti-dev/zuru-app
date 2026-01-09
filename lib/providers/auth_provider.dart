@@ -26,8 +26,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _checkAuthStatus() async {
     state = const AuthState.loading();
     try {
-      final isAuthenticated = await _authRepository.isAuthenticated();
-      if (isAuthenticated) {
+      final isSignedIn = await _authRepository.isSignedIn();
+      if (isSignedIn) {
         final user = await _authRepository.getCurrentUser();
         if (user != null) {
           state = AuthState.authenticated(user);
