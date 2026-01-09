@@ -1,0 +1,30 @@
+{
+  "environment": "prod",
+  "apiBaseUrl": "https://api.zuru.app",
+  "firebase": {
+    "apiKey": "prod-api-key-here",
+    "authDomain": "zuru-prod.firebaseapp.com",
+    "projectId": "zuru-prod",
+    "storageBucket": "zuru-prod.appspot.com",
+    "messagingSenderId": "987654321098",
+    "appId": "1:987654321098:web:1234567890abcdef"
+  },
+  "features": {
+    "analytics": true,
+    "crashReporting": true,
+    "pushNotifications": true,
+    "offlineMode": true,
+    "socialFeatures": true,
+    "aiInsights": true,
+    "publicSharing": true,
+    "advancedPrivacy": true
+  },
+  "app": {
+    "name": "Zuru",
+    "version": "1.0.0",
+    "buildNumber": "1",
+    "supportEmail": "support@zuru.app",
+    "privacyPolicyUrl": "https://zuru.app/privacy",
+    "termsOfServiceUrl": "https://zuru.app/terms"
+  }
+}
