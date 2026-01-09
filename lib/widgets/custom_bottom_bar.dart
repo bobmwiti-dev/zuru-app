@@ -56,6 +56,12 @@ class CustomBottomBar extends StatelessWidget {
       route: '/memory-feed-screen',
     ),
     CustomBottomBarItem(
+      label: 'Friends',
+      icon: Icons.people_outline,
+      activeIcon: Icons.people,
+      route: '/friends-screen',
+    ),
+    CustomBottomBarItem(
       label: 'Map',
       icon: Icons.map_outlined,
       activeIcon: Icons.map,
@@ -76,7 +82,7 @@ class CustomBottomBar extends StatelessWidget {
       label: 'Profile',
       icon: Icons.person_outline,
       activeIcon: Icons.person,
-      route: '/authentication-screen',
+      route: '/profile-screen',
     ),
   ];
 
@@ -290,6 +296,12 @@ class CustomBottomBarSimple extends StatelessWidget {
       route: '/memory-feed-screen',
     ),
     CustomBottomBarItem(
+      label: 'Friends',
+      icon: Icons.people_outline,
+      activeIcon: Icons.people,
+      route: '/friends-screen',
+    ),
+    CustomBottomBarItem(
       label: 'Map',
       icon: Icons.map_outlined,
       activeIcon: Icons.map,
@@ -311,7 +323,7 @@ class CustomBottomBarSimple extends StatelessWidget {
       label: 'Profile',
       icon: Icons.person_outline,
       activeIcon: Icons.person,
-      route: '/authentication-screen',
+      route: '/profile-screen',
     ),
   ];
 
