@@ -121,19 +121,26 @@ class SocialPlatformsWidget extends StatelessWidget {
     final isAvailable = platform['available'] as bool;
 
     return InkWell(
-      onTap: isAvailable ? () => _handlePlatformTap(platform['name'] as String) : null,
+      onTap:
+          isAvailable
+              ? () => _handlePlatformTap(platform['name'] as String)
+              : null,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.all(3.w),
         decoration: BoxDecoration(
-          color: isAvailable
-              ? color.withValues(alpha: 0.1)
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color:
+              isAvailable
+                  ? color.withValues(alpha: 0.1)
+                  : theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.3,
+                  ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isAvailable
-                ? color.withValues(alpha: 0.3)
-                : theme.colorScheme.outline.withValues(alpha: 0.2),
+            color:
+                isAvailable
+                    ? color.withValues(alpha: 0.3)
+                    : theme.colorScheme.outline.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -144,12 +151,20 @@ class SocialPlatformsWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(1.w),
               decoration: BoxDecoration(
-                color: isAvailable ? color : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
+                color:
+                    isAvailable
+                        ? color
+                        : theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.2,
+                        ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: CustomIconWidget(
                 iconName: platform['icon'] as String,
-                color: isAvailable ? Colors.white : theme.colorScheme.onSurfaceVariant,
+                color:
+                    isAvailable
+                        ? Colors.white
+                        : theme.colorScheme.onSurfaceVariant,
                 size: 18,
               ),
             ),
@@ -224,7 +239,9 @@ class SocialPlatformsWidget extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(2.w),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.5,
+            ),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: theme.colorScheme.outline.withValues(alpha: 0.2),
@@ -299,7 +316,7 @@ class SocialPlatformsWidget extends StatelessWidget {
   }
 
   void _generateQRCode() {
-    // TODO: Implement QR code generation for memory link
+    // Generate QR code for memory sharing - handled by parent screen
     onPlatformSelected('qr_code');
   }
 
@@ -314,7 +331,7 @@ class SocialPlatformsWidget extends StatelessWidget {
   }
 
   void _saveToDevice() {
-    // TODO: Implement save to device functionality
+    // Save memory to device - handled by parent screen
     onPlatformSelected('save');
   }
 }

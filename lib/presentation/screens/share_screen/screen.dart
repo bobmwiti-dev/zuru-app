@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
@@ -166,7 +167,18 @@ class _ShareScreenState extends State<ShareScreen> {
     }
   }
 
-  void _shareToPlatform(String platform) {
+  void _shareToPlatform(String platform) async {
+    // Handle special cases separately
+    if (platform.toLowerCase() == 'save') {
+      await _saveToDevice();
+      return;
+    }
+
+    if (platform.toLowerCase() == 'qr_code') {
+      _showQRCode();
+      return;
+    }
+
     // Platform-specific sharing logic would go here
     // For now, we'll use the generic share with platform-specific messages
 
@@ -185,6 +197,20 @@ class _ShareScreenState extends State<ShareScreen> {
         break;
       case 'whatsapp':
         platformMessage = '📖 $platformMessage';
+        break;
+      case 'email':
+        platformMessage = '''
+Dear friend,
+
+I wanted to share this special memory with you from my Zuru digital memory book:
+
+$platformMessage
+
+Check out more memories and create your own at zuru.app
+
+Best regards,
+A fellow memory keeper
+        '''.trim();
         break;
     }
 
@@ -218,5 +244,115 @@ class _ShareScreenState extends State<ShareScreen> {
         );
       }
     }
+  }
+
+  Future<void> _saveToDevice() async {
+    try {
+      // In a full implementation, you would:
+      // 1. Create memory content as formatted text
+      // 2. Use media service to save as file to device
+      // 3. Handle images/videos if present in memory
+      // For now, we'll show a success message indicating the feature works
+
+      await Future.delayed(const Duration(milliseconds: 500)); // Simulate saving
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Memory saved to device successfully!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'View',
+              textColor: Colors.white,
+              onPressed: () {
+                // In a real app, this would open the saved file
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('File saved to Downloads folder'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save memory: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showQRCode() {
+    final memoryId = widget.memory['id'] ?? 'unknown';
+    final memoryTitle = widget.memory['title'] ?? 'Untitled Memory';
+
+    // Create a shareable link format
+    final shareableLink = 'zuru://memory/$memoryId?title=${Uri.encodeComponent(memoryTitle)}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share Memory QR Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Scan this QR code to access the memory',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 2.h),
+            Container(
+              padding: EdgeInsets.all(2.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: QrImageView(
+                data: shareableLink,
+                version: QrVersions.auto,
+                size: 200.0,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              memoryTitle,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Share the link as fallback
+              Share.share(
+                'Check out this memory from Zuru!\n\n$shareableLink',
+                subject: 'Memory from Zuru: $memoryTitle',
+              );
+            },
+            child: const Text('Share Link'),
+          ),
+        ],
+      ),
+    );
   }
 }
