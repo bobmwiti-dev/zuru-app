@@ -23,9 +23,7 @@ class AppAnalytics {
       await _repository.logScreenView(
         userId: userId,
         screenName: screenName,
-        parameters: {
-          'screen_class': screenClass ?? screenName,
-        },
+        parameters: {'screen_class': screenClass ?? screenName},
       );
 
       _logger.debug('Screen view tracked: $screenName');
@@ -35,7 +33,10 @@ class AppAnalytics {
   }
 
   /// Track user action
-  Future<void> trackUserAction(String action, {Map<String, dynamic>? parameters}) async {
+  Future<void> trackUserAction(
+    String action, {
+    Map<String, dynamic>? parameters,
+  }) async {
     try {
       final userId = _getCurrentUserId?.call() ?? 'anonymous';
       await _repository.logUserAction(
@@ -58,13 +59,16 @@ class AppAnalytics {
     required int characterCount,
   }) async {
     // Note: We don't have a specific entry object here, so we'll use logUserAction
-    await trackUserAction('memory_created', parameters: {
-      'memory_id': memoryId,
-      'mood': mood,
-      'has_photo': hasPhoto,
-      'has_location': hasLocation,
-      'character_count': characterCount,
-    });
+    await trackUserAction(
+      'memory_created',
+      parameters: {
+        'memory_id': memoryId,
+        'mood': mood,
+        'has_photo': hasPhoto,
+        'has_location': hasLocation,
+        'character_count': characterCount,
+      },
+    );
   }
 
   /// Track memory viewed
@@ -72,10 +76,10 @@ class AppAnalytics {
     required String memoryId,
     required String source, // 'feed', 'search', 'friend', 'notification'
   }) async {
-    await trackEvent(AnalyticsEvent.memoryViewed, parameters: {
-      'memory_id': memoryId,
-      'source': source,
-    });
+    await trackEvent(
+      AnalyticsEvent.memoryViewed,
+      parameters: {'memory_id': memoryId, 'source': source},
+    );
   }
 
   /// Track memory shared
@@ -84,22 +88,29 @@ class AppAnalytics {
     required String platform, // 'whatsapp', 'facebook', 'twitter', etc.
     required String privacyLevel, // 'public', 'friends', 'link'
   }) async {
-    await trackEvent(AnalyticsEvent.memoryShared, parameters: {
-      'memory_id': memoryId,
-      'platform': platform,
-      'privacy_level': privacyLevel,
-    });
+    await trackEvent(
+      AnalyticsEvent.memoryShared,
+      parameters: {
+        'memory_id': memoryId,
+        'platform': platform,
+        'privacy_level': privacyLevel,
+      },
+    );
   }
 
   /// Track social interaction
   Future<void> trackSocialInteraction({
-    required String interactionType, // 'friend_request', 'accept_request', 'message'
+    required String
+    interactionType, // 'friend_request', 'accept_request', 'message'
     required String targetUserId,
   }) async {
-    await trackEvent(AnalyticsEvent.socialInteraction, parameters: {
-      'interaction_type': interactionType,
-      'target_user_id': targetUserId,
-    });
+    await trackEvent(
+      AnalyticsEvent.socialInteraction,
+      parameters: {
+        'interaction_type': interactionType,
+        'target_user_id': targetUserId,
+      },
+    );
   }
 
   /// Track search performed
@@ -128,22 +139,22 @@ class AppAnalytics {
     required int intensity,
     required bool hasNote,
   }) async {
-    await trackEvent(AnalyticsEvent.moodLogged, parameters: {
-      'mood': mood,
-      'intensity': intensity,
-      'has_note': hasNote,
-    });
+    await trackEvent(
+      AnalyticsEvent.moodLogged,
+      parameters: {'mood': mood, 'intensity': intensity, 'has_note': hasNote},
+    );
   }
 
   /// Track AI insight viewed
   Future<void> trackAIInsightViewed({
-    required String insightType, // 'mood_pattern', 'location_recommendation', 'personalized_suggestion'
+    required String
+    insightType, // 'mood_pattern', 'location_recommendation', 'personalized_suggestion'
     required String insightId,
   }) async {
-    await trackEvent(AnalyticsEvent.aiInsightViewed, parameters: {
-      'insight_type': insightType,
-      'insight_id': insightId,
-    });
+    await trackEvent(
+      AnalyticsEvent.aiInsightViewed,
+      parameters: {'insight_type': insightType, 'insight_id': insightId},
+    );
   }
 
   /// Track app performance
@@ -152,11 +163,10 @@ class AppAnalytics {
     required double value,
     required String unit, // 'ms', 'MB', 'count'
   }) async {
-    await trackEvent(AnalyticsEvent.performanceMetric, parameters: {
-      'metric': metric,
-      'value': value,
-      'unit': unit,
-    });
+    await trackEvent(
+      AnalyticsEvent.performanceMetric,
+      parameters: {'metric': metric, 'value': value, 'unit': unit},
+    );
   }
 
   /// Track error occurred
@@ -165,11 +175,14 @@ class AppAnalytics {
     required String errorMessage,
     required bool isFatal,
   }) async {
-    await trackEvent(AnalyticsEvent.errorOccurred, parameters: {
-      'error_type': errorType,
-      'error_message': errorMessage,
-      'is_fatal': isFatal,
-    });
+    await trackEvent(
+      AnalyticsEvent.errorOccurred,
+      parameters: {
+        'error_type': errorType,
+        'error_message': errorMessage,
+        'is_fatal': isFatal,
+      },
+    );
   }
 
   /// Track user engagement
@@ -178,14 +191,17 @@ class AppAnalytics {
     required String action,
     required Duration duration,
   }) async {
-    await trackEvent(AnalyticsEvent.userEngagement, parameters: {
-      'feature': feature,
-      'action': action,
-      'duration_seconds': duration.inSeconds,
-    });
+    await trackEvent(
+      AnalyticsEvent.userEngagement,
+      parameters: {
+        'feature': feature,
+        'action': action,
+        'duration_seconds': duration.inSeconds,
+      },
+    );
   }
 
-  /// Set user properties (not implemented in current repository)
+  /// Set user properties for analytics
   Future<void> setUserProperties({
     String? userId,
     String? userType, // 'free', 'premium'
@@ -194,12 +210,36 @@ class AppAnalytics {
     String? preferredMood,
     String? appLanguage,
   }) async {
-    // TODO: Implement user properties tracking when repository supports it
-    _logger.debug('User properties tracking not implemented');
+    if (userId == null) {
+      _logger.warning('Cannot set user properties: userId is null');
+      return;
+    }
+
+    final properties = <String, String>{};
+
+    if (userType != null) properties['user_type'] = userType;
+    if (memoryCount != null) {
+      properties['memory_count'] = memoryCount.toString();
+    }
+    if (friendCount != null) {
+      properties['friend_count'] = friendCount.toString();
+    }
+    if (preferredMood != null) properties['preferred_mood'] = preferredMood;
+    if (appLanguage != null) properties['app_language'] = appLanguage;
+
+    await _repository.setUserProperties(
+      userId: userId,
+      properties: properties.isNotEmpty ? properties : null,
+    );
+
+    _logger.debug('User properties set for user $userId');
   }
 
   /// Track custom event
-  Future<void> trackEvent(String eventName, {Map<String, dynamic>? parameters}) async {
+  Future<void> trackEvent(
+    String eventName, {
+    Map<String, dynamic>? parameters,
+  }) async {
     try {
       final userId = _getCurrentUserId?.call() ?? 'anonymous';
       await _repository.logUserAction(
@@ -215,10 +255,13 @@ class AppAnalytics {
 
   /// Track app lifecycle events
   Future<void> trackAppLifecycle(String event) async {
-    await trackEvent('app_lifecycle', parameters: {
-      'event': event, // 'foreground', 'background', 'launch', 'terminate'
-      'timestamp': DateTime.now().toIso8601String(),
-    });
+    await trackEvent(
+      'app_lifecycle',
+      parameters: {
+        'event': event, // 'foreground', 'background', 'launch', 'terminate'
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
   }
 
   /// Track feature usage
@@ -227,17 +270,28 @@ class AppAnalytics {
     required String action,
     Map<String, dynamic>? metadata,
   }) async {
-    await trackEvent(AnalyticsEvent.featureUsed, parameters: {
-      'feature': featureName,
-      'action': action,
-      'metadata': metadata ?? {},
-    });
+    await trackEvent(
+      AnalyticsEvent.featureUsed,
+      parameters: {
+        'feature': featureName,
+        'action': action,
+        'metadata': metadata ?? {},
+      },
+    );
   }
 
   /// Reset analytics data (for privacy/GDPR compliance)
   Future<void> resetAnalyticsData() async {
-    // TODO: Implement data reset when repository supports it
-    _logger.info('Analytics data reset not implemented');
+    try {
+      // Reset Firebase Analytics data for the current user
+      await _repository.resetAnalyticsData(
+        _getCurrentUserId?.call() ?? 'anonymous',
+      );
+      _logger.info('Analytics data reset successfully');
+    } catch (e) {
+      _logger.error('Failed to reset analytics data', e);
+      rethrow;
+    }
   }
 }
 
@@ -316,7 +370,6 @@ class AnalyticsUtils {
 
 /// Analytics privacy manager
 class AnalyticsPrivacyManager {
-
   /// Check if user has consented to analytics
   static Future<bool> hasAnalyticsConsent() async {
     // Implementation would check shared preferences
@@ -331,16 +384,20 @@ class AnalyticsPrivacyManager {
   }
 
   /// Get privacy-friendly event parameters
-  static Map<String, dynamic> getPrivacySafeParameters(Map<String, dynamic> parameters) {
+  static Map<String, dynamic> getPrivacySafeParameters(
+    Map<String, dynamic> parameters,
+  ) {
     // Remove or anonymize personal information
     final safeParams = Map<String, dynamic>.from(parameters);
 
     // Remove potentially sensitive data
     safeParams.removeWhere((key, value) {
       return key.contains('email') ||
-             key.contains('phone') ||
-             key.contains('name') ||
-             key.contains('location') && value is String && value.length > 100; // Detailed addresses
+          key.contains('phone') ||
+          key.contains('name') ||
+          key.contains('location') &&
+              value is String &&
+              value.length > 100; // Detailed addresses
     });
 
     return safeParams;

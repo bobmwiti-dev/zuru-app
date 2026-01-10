@@ -9,7 +9,8 @@ import '../core/logging/logger.dart';
 class ConnectivityService {
   final Connectivity _connectivity;
   final Logger _logger;
-  final StreamController<ConnectivityResult> _connectivityController = StreamController.broadcast();
+  final StreamController<ConnectivityResult> _connectivityController =
+      StreamController.broadcast();
 
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
@@ -46,7 +47,8 @@ class ConnectivityService {
   }
 
   /// Stream of connectivity changes
-  Stream<ConnectivityResult> get connectivityStream => _connectivityController.stream;
+  Stream<ConnectivityResult> get connectivityStream =>
+      _connectivityController.stream;
 
   /// Check if device is connected to internet
   Future<bool> isConnected() async {
@@ -119,9 +121,10 @@ class ConnectivityService {
   }) async* {
     while (true) {
       final connectivityResult = await getCurrentConnectivity();
-      final hasInternet = connectivityResult != ConnectivityResult.none
-          ? await _hasInternetConnection()
-          : false;
+      final hasInternet =
+          connectivityResult != ConnectivityResult.none
+              ? await _hasInternetConnection()
+              : false;
 
       yield ConnectivityStatus(
         result: connectivityResult,
@@ -166,9 +169,27 @@ class ConnectivityStatus {
   ConnectionQuality get quality {
     if (isOffline) return ConnectionQuality.none;
 
-    // TODO: Implement actual quality checking (ping, speed test)
-    // For now, return good for all connections
-    return ConnectionQuality.good;
+    // Estimate quality based on connection type
+    switch (result) {
+      case ConnectivityResult.wifi:
+        // WiFi is generally good, but we could add ping tests here
+        return ConnectionQuality.excellent;
+      case ConnectivityResult.mobile:
+        // Mobile can vary, but assume good for LTE/5G
+        return ConnectionQuality.good;
+      case ConnectivityResult.ethernet:
+        // Ethernet is typically excellent
+        return ConnectionQuality.excellent;
+      case ConnectivityResult.vpn:
+        // VPN might have some latency but generally good
+        return ConnectionQuality.good;
+      case ConnectivityResult.bluetooth:
+      case ConnectivityResult.other:
+        // These are typically slower
+        return ConnectionQuality.poor;
+      case ConnectivityResult.none:
+        return ConnectionQuality.none;
+    }
   }
 
   @override
@@ -180,8 +201,8 @@ class ConnectivityStatus {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ConnectivityStatus &&
-           other.result == result &&
-           other.hasInternet == hasInternet;
+        other.result == result &&
+        other.hasInternet == hasInternet;
   }
 
   @override
@@ -189,13 +210,7 @@ class ConnectivityStatus {
 }
 
 /// Connection quality levels
-enum ConnectionQuality {
-  none,
-  poor,
-  fair,
-  good,
-  excellent,
-}
+enum ConnectionQuality { none, poor, fair, good, excellent }
 
 /// Connectivity utilities
 class ConnectivityUtils {
@@ -213,7 +228,6 @@ class ConnectivityUtils {
         return const Duration(seconds: 12);
       case ConnectivityResult.none:
       case ConnectivityResult.other:
-      default:
         return const Duration(seconds: 30);
     }
   }
@@ -221,8 +235,8 @@ class ConnectivityUtils {
   /// Check if connection type supports large file uploads
   static bool supportsLargeUploads(ConnectivityResult result) {
     return result == ConnectivityResult.wifi ||
-           result == ConnectivityResult.ethernet ||
-           result == ConnectivityResult.vpn;
+        result == ConnectivityResult.ethernet ||
+        result == ConnectivityResult.vpn;
   }
 
   /// Get connection speed estimate (rough)
@@ -241,13 +255,15 @@ class ConnectivityUtils {
       case ConnectivityResult.none:
         return 'None';
       case ConnectivityResult.other:
-      default:
         return 'Unknown';
     }
   }
 
   /// Check if should retry request based on connectivity
-  static bool shouldRetryOnConnectivity(ConnectivityResult result, int attemptNumber) {
+  static bool shouldRetryOnConnectivity(
+    ConnectivityResult result,
+    int attemptNumber,
+  ) {
     if (result == ConnectivityResult.none) return false;
 
     // Retry up to 3 times for poor connections

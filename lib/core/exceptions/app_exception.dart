@@ -185,6 +185,79 @@ class ServerException extends AppException {
   }
 }
 
+/// Firebase-related exceptions
+class FirebaseException extends AppException {
+  const FirebaseException({
+    required super.message,
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  });
+
+  @override
+  String get errorType => 'firebase';
+
+  @override
+  String get userFriendlyMessage {
+    if (message.contains('permission-denied')) {
+      return 'You don\'t have permission to perform this action.';
+    } else if (message.contains('not found')) {
+      return 'The requested data could not be found.';
+    } else if (message.contains('already exists')) {
+      return 'This item already exists.';
+    }
+    return 'A database error occurred. Please try again.';
+  }
+}
+
+/// Storage-related exceptions (file uploads, downloads, etc.)
+class StorageException extends AppException {
+  const StorageException({
+    required super.message,
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  });
+
+  @override
+  String get errorType => 'storage';
+
+  @override
+  String get userFriendlyMessage {
+    if (message.contains('unauthorized')) {
+      return 'You don\'t have permission to upload files.';
+    } else if (message.contains('not found')) {
+      return 'File not found.';
+    } else if (message.contains('quota exceeded')) {
+      return 'Storage limit exceeded. Please free up space.';
+    } else if (message.contains('invalid format')) {
+      return 'Invalid file format. Please choose a different file.';
+    }
+    return 'File operation failed. Please try again.';
+  }
+}
+
+/// Cache-related exceptions
+class CacheException extends AppException {
+  const CacheException({
+    required super.message,
+    super.code,
+    super.originalException,
+    super.stackTrace,
+  });
+
+  @override
+  String get errorType => 'cache';
+
+  @override
+  String get userFriendlyMessage {
+    if (message.contains('storage full')) {
+      return 'Device storage is full. Please free up space.';
+    }
+    return 'Cache operation failed. Please try again.';
+  }
+}
+
 /// Unknown or unexpected exceptions
 class UnknownException extends AppException {
   const UnknownException({

@@ -2,6 +2,13 @@ import 'dart:convert';
 import 'dart:math';
 
 import '../core/logging/logger.dart';
+// TODO: Add these packages to pubspec.yaml when implementing notifications:
+// firebase_messaging: ^14.7.10
+// flutter_local_notifications: ^16.3.2
+
+// When packages are added, uncomment these imports:
+// import 'package:firebase_messaging/firebase_messaging.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Notification service for push notifications and local notifications
 class NotificationService {
@@ -12,11 +19,40 @@ class NotificationService {
   /// Initialize notification service
   Future<void> initialize() async {
     try {
-      // TODO: Initialize Firebase Messaging and local notifications
-      // For now, this is a placeholder
+      // Initialize Firebase Messaging
+      // FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+      // Request permission for notifications
+      // NotificationSettings settings = await messaging.requestPermission(
+      //   alert: true,
+      //   badge: true,
+      //   sound: true,
+      // );
+
+      // Get FCM token
+      // String? token = await messaging.getToken();
+      // _logger.info('FCM Token: $token');
+
+      // Initialize local notifications
+      // const AndroidInitializationSettings androidSettings =
+      //     AndroidInitializationSettings('@mipmap/ic_launcher');
+      // const DarwinInitializationSettings iosSettings =
+      //     DarwinInitializationSettings();
+      // const InitializationSettings settings = InitializationSettings(
+      //   android: androidSettings,
+      //   iOS: iosSettings,
+      // );
+      // await _localNotificationsPlugin.initialize(settings);
+
+      // Set up message handlers
+      // FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      // FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
+      // FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessageStatic);
+
       _logger.info('Notification service initialized');
     } catch (e) {
       _logger.error('Failed to initialize notification service', e);
+      rethrow;
     }
   }
 
@@ -89,10 +125,21 @@ class NotificationService {
   /// Cancel all notifications
   Future<void> cancelAllNotifications() async {
     try {
-      // TODO: Cancel all notifications
+      // Cancel all local notifications
+      // If using flutter_local_notifications:
+      // await _localNotificationsPlugin.cancelAll();
+
+      // Cancel all scheduled notifications
+      // If using flutter_local_notifications:
+      // await _localNotificationsPlugin.cancelAll();
+
+      // For Firebase Cloud Messaging, clear any pending messages
+      // Note: FCM doesn't have a direct "cancel all" but we can clear local state
+
       _logger.info('Cancelled all notifications');
     } catch (e) {
       _logger.error('Failed to cancel all notifications', e);
+      rethrow;
     }
   }
 
@@ -303,12 +350,19 @@ class NotificationChannelInfo {
 }
 
 /// Notification importance levels
-enum NotificationImportance {
-  low,
-  default_,
-  high,
-  max,
-}
+enum NotificationImportance { low, default_, high, max }
+
+// TODO: Add message handlers when firebase_messaging is integrated:
+// void _handleForegroundMessage(RemoteMessage message) { ... }
+// void _handleBackgroundMessage(RemoteMessage message) { ... }
+
+/// Static method for background message handling (required by FCM)
+// When firebase_messaging is added, uncomment this:
+// Future<void> _handleBackgroundMessageStatic(RemoteMessage message) async {
+//   // This method must be static and top-level for FCM background handling
+//   // Initialize minimal services if needed
+//   Logger().info('Received background message: ${message.notification?.title}');
+// }
 
 /// Notification utilities
 class NotificationUtils {
