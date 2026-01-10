@@ -64,6 +64,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Sign in with external authentication (Google, Apple, etc.)
+  void signInWithExternalAuth(AuthUser user) {
+    state = AuthState.authenticated(user);
+  }
+
   // Sign out
   Future<void> signOut() async {
     state = const AuthState.loading();
