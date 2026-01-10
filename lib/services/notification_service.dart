@@ -1,53 +1,49 @@
 import 'dart:convert';
 import 'dart:math';
 
-import '../core/logging/logger.dart';
-// TODO: Add these packages to pubspec.yaml when implementing notifications:
-// firebase_messaging: ^14.7.10
-// flutter_local_notifications: ^16.3.2
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-// When packages are added, uncomment these imports:
-// import 'package:firebase_messaging/firebase_messaging.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../core/logging/logger.dart';
 
 /// Notification service for push notifications and local notifications
 class NotificationService {
   final Logger _logger;
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   NotificationService(this._logger);
 
   /// Initialize notification service
   Future<void> initialize() async {
     try {
-      // Initialize Firebase Messaging
-      // FirebaseMessaging messaging = FirebaseMessaging.instance;
-
       // Request permission for notifications
-      // NotificationSettings settings = await messaging.requestPermission(
-      //   alert: true,
-      //   badge: true,
-      //   sound: true,
-      // );
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
       // Get FCM token
-      // String? token = await messaging.getToken();
-      // _logger.info('FCM Token: $token');
+      String? token = await FirebaseMessaging.instance.getToken();
+      _logger.info('FCM Token: $token');
 
       // Initialize local notifications
-      // const AndroidInitializationSettings androidSettings =
-      //     AndroidInitializationSettings('@mipmap/ic_launcher');
-      // const DarwinInitializationSettings iosSettings =
-      //     DarwinInitializationSettings();
-      // const InitializationSettings settings = InitializationSettings(
-      //   android: androidSettings,
-      //   iOS: iosSettings,
-      // );
-      // await _localNotificationsPlugin.initialize(settings);
+      const AndroidInitializationSettings androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings iosSettings =
+          DarwinInitializationSettings();
+      const InitializationSettings settings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      await _localNotificationsPlugin.initialize(settings);
 
       // Set up message handlers
-      // FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      // FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
-      // FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessageStatic);
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
+      FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessageStatic);
 
       _logger.info('Notification service initialized');
     } catch (e) {
@@ -353,16 +349,39 @@ class NotificationChannelInfo {
 enum NotificationImportance { low, default_, high, max }
 
 // TODO: Add message handlers when firebase_messaging is integrated:
-// void _handleForegroundMessage(RemoteMessage message) { ... }
-// void _handleBackgroundMessage(RemoteMessage message) { ... }
+/// Handle foreground messages
+void _handleForegroundMessage(RemoteMessage message) {
+  ConsoleLogger(
+    name: 'NotificationService',
+  ).info('Received foreground message: ${message.notification?.title}');
+
+  if (message.notification != null) {
+    // Show local notification for foreground messages
+    // TODO: Implement local notification display when FlutterLocalNotificationsPlugin is available
+
+    // Note: This would need the FlutterLocalNotificationsPlugin instance
+    // For now, just log the message
+    ConsoleLogger(
+      name: 'NotificationService',
+    ).info('Would show local notification: ${message.notification?.title}');
+  }
+}
+
+/// Handle messages when app is opened from background
+void _handleBackgroundMessage(RemoteMessage message) {
+  ConsoleLogger(
+    name: 'NotificationService',
+  ).info('App opened from background message: ${message.notification?.title}');
+  // Handle navigation or other actions based on message data
+}
 
 /// Static method for background message handling (required by FCM)
-// When firebase_messaging is added, uncomment this:
-// Future<void> _handleBackgroundMessageStatic(RemoteMessage message) async {
-//   // This method must be static and top-level for FCM background handling
-//   // Initialize minimal services if needed
-//   Logger().info('Received background message: ${message.notification?.title}');
-// }
+@pragma('vm:entry-point')
+Future<void> _handleBackgroundMessageStatic(RemoteMessage message) async {
+  // This method must be static and top-level for FCM background handling
+  // Use debugPrint instead of print for better production logging
+  debugPrint('Received background message: ${message.notification?.title}');
+}
 
 /// Notification utilities
 class NotificationUtils {
