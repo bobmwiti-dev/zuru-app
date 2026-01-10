@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-import '../../../core/utils/animation_utils.dart';
-import '../../../widgets/custom_icon_widget.dart';
 import './widgets/auth_form_widget.dart';
 import './widgets/auth_header_widget.dart';
 import './widgets/social_login_widget.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../domain/models/auth_user.dart';
 
 /// Authentication Screen for Zuru journaling app
 /// Handles user registration and login with email/password and social authentication
@@ -171,23 +172,70 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
     });
 
     try {
-      // TODO: Implement Google Sign-In with the provider
-      // For now, we'll just show a message
-      await Future.delayed(const Duration(seconds: 1));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Google Sign-In coming soon!'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            margin: EdgeInsets.all(16),
-          ),
-        );
-        AnimationUtils.selectionClick();
+      // Initialize Google Sign-In
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+      );
+
+      // Start the sign-in process
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        setState(() {
+          _isLoading = false;
+        });
+        return;
       }
+
+      // Get authentication credentials
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create Firebase credential
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final User? user = userCredential.user;
+
+      if (user != null) {
+        // Create AuthUser from Firebase user
+        final authUser = AuthUser(
+          id: user.uid,
+          email: user.email ?? '',
+          name: user.displayName ?? 'User',
+          avatarUrl: user.photoURL,
+          lastLoginAt: DateTime.now(),
+        );
+
+        // Update auth state using the notifier
+        final authNotifier = ref.read(authStateProvider.notifier);
+        authNotifier.signInWithExternalAuth(authUser);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${authUser.name}!'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              margin: EdgeInsets.all(16),
+            ),
+          );
+
+          // Navigate to main screen after successful sign-in
+          Navigator.pushReplacementNamed(context, '/');
+        }
+      }
+
+      AnimationUtils.selectionClick();
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to sign in with Google';

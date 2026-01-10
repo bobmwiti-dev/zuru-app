@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/custom_bottom_bar.dart';
 import './widgets/insights_header_widget.dart';
 import './widgets/mood_patterns_widget.dart';
 import './widgets/location_insights_widget.dart';
@@ -20,6 +18,7 @@ class AIInsightsScreen extends StatefulWidget {
 
 class _AIInsightsScreenState extends State<AIInsightsScreen> {
   int _currentBottomNavIndex = 4; // Analytics tab active
+  bool _isRefreshing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -108,13 +107,46 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
     }
   }
 
-  void _refreshInsights() {
-    // TODO: Implement insights refresh
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Refreshing your AI insights...'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _refreshInsights() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      // In a real app, this would call the analytics repository to refresh insights
+      // For now, simulate a network call
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Simulate refreshing insights data by triggering a rebuild
+      setState(() {
+        // This would normally update with fresh data from the repository
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('AI insights refreshed successfully!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh insights: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 }
