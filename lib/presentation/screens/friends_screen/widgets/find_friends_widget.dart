@@ -21,7 +21,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       'id': '1',
       'name': 'Maria Garcia',
       'username': 'mariag',
-      'avatar': 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150',
       'mutualFriends': 2,
       'memoriesCount': 15,
       'distance': '2.3 km away',
@@ -33,7 +34,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       'id': '2',
       'name': 'James Mitchell',
       'username': 'jamesm',
-      'avatar': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
       'mutualFriends': 0,
       'memoriesCount': 22,
       'distance': '5.1 km away',
@@ -45,7 +47,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       'id': '3',
       'name': 'Sophie Chen',
       'username': 'sophiec',
-      'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       'mutualFriends': 4,
       'memoriesCount': 18,
       'distance': '1.8 km away',
@@ -57,7 +60,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       'id': '4',
       'name': 'Ahmed Hassan',
       'username': 'ahmedh',
-      'avatar': 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150',
       'mutualFriends': 1,
       'memoriesCount': 9,
       'distance': '3.7 km away',
@@ -69,7 +73,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       'id': '5',
       'name': 'Grace Oduya',
       'username': 'graceo',
-      'avatar': 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=150',
       'mutualFriends': 3,
       'memoriesCount': 11,
       'distance': '4.2 km away',
@@ -101,12 +106,18 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
       if (query.isEmpty) {
         _filteredUsers = List.from(_discoverableUsers);
       } else {
-        _filteredUsers = _discoverableUsers.where((user) {
-          final name = (user['name'] as String).toLowerCase();
-          final username = (user['username'] as String).toLowerCase();
-          final interests = (user['commonInterests'] as List<String>).join(' ').toLowerCase();
-          return name.contains(query) || username.contains(query) || interests.contains(query);
-        }).toList();
+        _filteredUsers =
+            _discoverableUsers.where((user) {
+              final name = (user['name'] as String).toLowerCase();
+              final username = (user['username'] as String).toLowerCase();
+              final interests =
+                  (user['commonInterests'] as List<String>)
+                      .join(' ')
+                      .toLowerCase();
+              return name.contains(query) ||
+                  username.contains(query) ||
+                  interests.contains(query);
+            }).toList();
       }
     });
   }
@@ -114,8 +125,25 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
   void _onFilterChanged(String filter) {
     setState(() {
       _selectedFilter = filter;
-      // TODO: Implement actual filtering logic
-      _filteredUsers = List.from(_discoverableUsers);
+      _filteredUsers =
+          _discoverableUsers.where((user) {
+            switch (filter) {
+              case 'All':
+                return true;
+              case 'Nearby':
+                // In a real app, this would filter by location proximity
+                return user['location'] != null;
+              case 'Mutual Friends':
+                // Filter users with mutual friends
+                return (user['mutualFriends'] as int?) != null &&
+                    (user['mutualFriends'] as int) > 0;
+              case 'Recent Activity':
+                // In a real app, this would filter by recent activity
+                return user['isActive'] == true;
+              default:
+                return true;
+            }
+          }).toList();
     });
   }
 
@@ -141,18 +169,19 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
                       color: theme.colorScheme.onSurfaceVariant,
                       size: 20,
                     ),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: CustomIconWidget(
-                              iconName: 'clear',
-                              color: theme.colorScheme.onSurfaceVariant,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                            },
-                          )
-                        : null,
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              icon: CustomIconWidget(
+                                iconName: 'clear',
+                                color: theme.colorScheme.onSurfaceVariant,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                            : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -186,9 +215,19 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
                       SizedBox(width: 2.w),
                       _buildFilterChip(context, theme, 'Nearby', 'nearby'),
                       SizedBox(width: 2.w),
-                      _buildFilterChip(context, theme, 'Mutual Friends', 'mutual'),
+                      _buildFilterChip(
+                        context,
+                        theme,
+                        'Mutual Friends',
+                        'mutual',
+                      ),
                       SizedBox(width: 2.w),
-                      _buildFilterChip(context, theme, 'Interests', 'interests'),
+                      _buildFilterChip(
+                        context,
+                        theme,
+                        'Interests',
+                        'interests',
+                      ),
                     ],
                   ),
                 ),
@@ -198,46 +237,58 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
 
           // Users List
           Expanded(
-            child: _filteredUsers.isEmpty
-                ? _buildEmptyState(theme)
-                : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 4.w),
-                    itemCount: _filteredUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = _filteredUsers[index];
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: 2.w),
-                        child: _buildUserCard(context, theme, user),
-                      );
-                    },
-                  ),
+            child:
+                _filteredUsers.isEmpty
+                    ? _buildEmptyState(theme)
+                    : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      itemCount: _filteredUsers.length,
+                      itemBuilder: (context, index) {
+                        final user = _filteredUsers[index];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 2.w),
+                          child: _buildUserCard(context, theme, user),
+                        );
+                      },
+                    ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(BuildContext context, ThemeData theme, String label, String value) {
+  Widget _buildFilterChip(
+    BuildContext context,
+    ThemeData theme,
+    String label,
+    String value,
+  ) {
     final isSelected = _selectedFilter == value;
 
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) => _onFilterChanged(value),
-      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.5,
+      ),
       selectedColor: theme.colorScheme.primary.withValues(alpha: 0.2),
       checkmarkColor: theme.colorScheme.primary,
       labelStyle: theme.textTheme.labelMedium?.copyWith(
-        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+        color:
+            isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.5)
-              : theme.colorScheme.outline.withValues(alpha: 0.3),
+          color:
+              isSelected
+                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                  : theme.colorScheme.outline.withValues(alpha: 0.3),
         ),
       ),
     );
@@ -274,7 +325,11 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
     );
   }
 
-  Widget _buildUserCard(BuildContext context, ThemeData theme, Map<String, dynamic> user) {
+  Widget _buildUserCard(
+    BuildContext context,
+    ThemeData theme,
+    Map<String, dynamic> user,
+  ) {
     final isRequested = user['isRequested'] as bool;
 
     return Container(
@@ -361,7 +416,10 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
               ),
               if (user['mutualFriends'] > 0)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 2.w,
+                    vertical: 0.5.h,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.secondary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -380,7 +438,8 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
           SizedBox(height: 2.h),
 
           // Common interests
-          if (user['commonInterests'] != null && (user['commonInterests'] as List).isNotEmpty)
+          if (user['commonInterests'] != null &&
+              (user['commonInterests'] as List).isNotEmpty)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -395,22 +454,28 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
                 Wrap(
                   spacing: 1.w,
                   runSpacing: 0.5.h,
-                  children: (user['commonInterests'] as List<String>).map((interest) {
-                    return Container(
-                      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        interest,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  children:
+                      (user['commonInterests'] as List<String>).map((interest) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 2.w,
+                            vertical: 0.5.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            interest,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 ),
                 SizedBox(height: 1.h),
               ],
@@ -421,7 +486,9 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
             Container(
               padding: EdgeInsets.all(2.w),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -454,8 +521,14 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
               Expanded(
                 child: CustomButton(
                   text: isRequested ? 'Request Sent' : 'Add Friend',
-                  onPressed: isRequested ? null : () => _sendFriendRequest(context, user),
-                  variant: isRequested ? CustomButtonVariant.tertiary : CustomButtonVariant.primary,
+                  onPressed:
+                      isRequested
+                          ? null
+                          : () => _sendFriendRequest(context, user),
+                  variant:
+                      isRequested
+                          ? CustomButtonVariant.tertiary
+                          : CustomButtonVariant.primary,
                   size: CustomButtonSize.small,
                 ),
               ),
@@ -489,11 +562,17 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
   }
 
   void _viewProfile(BuildContext context, Map<String, dynamic> user) {
-    // TODO: Navigate to user profile
+    // Navigate to profile screen (currently shows current user's profile)
+    // TODO: Implement viewing other users' profiles when user profile system is expanded
+    Navigator.pushNamed(context, '/profile-screen');
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Viewing ${user['name']}\'s profile...'),
+        content: Text(
+          'Viewing user profiles coming soon! Currently showing your profile.',
+        ),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

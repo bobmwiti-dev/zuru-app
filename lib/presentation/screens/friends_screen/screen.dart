@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/custom_bottom_bar.dart';
 import './widgets/friends_list_widget.dart';
 import './widgets/friend_requests_widget.dart';
 import './widgets/find_friends_widget.dart';
@@ -101,13 +99,32 @@ class _FriendsScreenState extends State<FriendsScreen>
     }
   }
 
-  void _inviteFriends() {
-    // TODO: Implement friend invitation functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invite friends coming soon!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  void _inviteFriends() async {
+    const String invitationMessage = '''
+🌟 Join me on Zuru - Your Digital Memory Book! 🌟
+
+I'm documenting my experiences and creating amazing memories with Zuru. Join me and let's discover and share our favorite places together!
+
+📱 Download Zuru and use invitation code: ZURU2024
+
+#ZuruApp #DigitalMemories #TravelDiary
+    ''';
+
+    try {
+      await Share.share(
+        invitationMessage.trim(),
+        subject: 'Join me on Zuru - Digital Memory Book',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open share dialog: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

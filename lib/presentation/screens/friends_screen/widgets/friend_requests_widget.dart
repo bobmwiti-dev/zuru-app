@@ -36,10 +36,7 @@ class _FriendRequestsWidgetState extends State<FriendRequestsWidget>
         // Sub-tabs
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Received'),
-            Tab(text: 'Sent'),
-          ],
+          tabs: const [Tab(text: 'Received'), Tab(text: 'Sent')],
           labelStyle: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -52,10 +49,7 @@ class _FriendRequestsWidgetState extends State<FriendRequestsWidget>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
-              ReceivedRequestsTab(),
-              SentRequestsTab(),
-            ],
+            children: const [ReceivedRequestsTab(), SentRequestsTab()],
           ),
         ),
       ],
@@ -63,23 +57,30 @@ class _FriendRequestsWidgetState extends State<FriendRequestsWidget>
   }
 }
 
-class ReceivedRequestsTab extends StatelessWidget {
+class ReceivedRequestsTab extends StatefulWidget {
   const ReceivedRequestsTab({super.key});
 
-  // Mock received requests
-  static const _receivedRequests = [
+  @override
+  State<ReceivedRequestsTab> createState() => _ReceivedRequestsTabState();
+}
+
+class _ReceivedRequestsTabState extends State<ReceivedRequestsTab> {
+  // Mock received requests - in a real app, this would come from a repository
+  final List<Map<String, dynamic>> _receivedRequests = [
     {
       'id': '1',
       'name': 'David Kim',
       'username': 'davidk',
-      'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
       'mutualFriends': 3,
     },
     {
       'id': '2',
       'name': 'Sarah Johnson',
       'username': 'sarahj',
-      'avatar': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
       'mutualFriends': 1,
     },
   ];
@@ -89,29 +90,39 @@ class ReceivedRequestsTab extends StatelessWidget {
     final theme = Theme.of(context);
 
     return _receivedRequests.isEmpty
-        ? _buildEmptyState(context, theme, 'No friend requests', 'When someone sends you a friend request, it will appear here.')
+        ? _buildEmptyState(
+          context,
+          theme,
+          'No friend requests',
+          'When someone sends you a friend request, it will appear here.',
+        )
         : ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.all(4.w),
-            itemCount: _receivedRequests.length,
-            itemBuilder: (context, index) {
-              final request = _receivedRequests[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: 2.w),
-                child: _buildRequestCard(context, theme, request, true),
-              );
-            },
-          );
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.all(4.w),
+          itemCount: _receivedRequests.length,
+          itemBuilder: (context, index) {
+            final request = _receivedRequests[index];
+            return Padding(
+              padding: EdgeInsets.only(bottom: 2.w),
+              child: _buildRequestCard(context, theme, request, true),
+            );
+          },
+        );
   }
 
-  Widget _buildRequestCard(BuildContext context, ThemeData theme, Map<String, dynamic> request, bool isReceived) {
+  Widget _buildRequestCard(
+    BuildContext context,
+    ThemeData theme,
+    Map<String, dynamic> request,
+    bool isReceived,
+  ) {
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -134,7 +145,7 @@ class ReceivedRequestsTab extends StatelessWidget {
                 Text(
                   '@${request['username']}',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 if (request['mutualFriends'] != null) ...[
@@ -164,21 +175,6 @@ class ReceivedRequestsTab extends StatelessWidget {
               variant: CustomButtonVariant.secondary,
               size: CustomButtonSize.small,
             ),
-          ] else ...[
-            CustomButton(
-              text: 'Cancel Request',
-              onPressed: () => _cancelRequest(context, request),
-              variant: CustomButtonVariant.secondary,
-              size: CustomButtonSize.small,
-            ),
-            SizedBox(width: 2.w),
-            IconButton(
-              onPressed: () => _viewProfile(context, request),
-              icon: Icon(
-                Icons.person_outline,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
           ],
         ],
       ),
@@ -188,99 +184,132 @@ class ReceivedRequestsTab extends StatelessWidget {
   void _acceptRequest(BuildContext context, Map<String, dynamic> request) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Accept Request?'),
-        content: Text('Are you sure you want to accept ${request['name']}\'s friend request?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Accept Request?'),
+            content: Text(
+              'Are you sure you want to accept ${request['name']}\'s friend request?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _acceptFriendRequest(request);
+                },
+                child: const Text('Accept'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement accept request logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('You are now friends with ${request['name']}!')),
-              );
-            },
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
     );
+  }
+
+  void _acceptFriendRequest(Map<String, dynamic> request) {
+    setState(() {
+      _receivedRequests.removeWhere((r) => r['id'] == request['id']);
+    });
+
+    // In a real app, this would call a repository to accept the friend request
+    // For now, show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You are now friends with ${request['name']}!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _declineFriendRequest(Map<String, dynamic> request) {
+    setState(() {
+      _receivedRequests.removeWhere((r) => r['id'] == request['id']);
+    });
+
+    // In a real app, this would call a repository to decline the friend request
+    // For now, show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Friend request from ${request['name']} declined'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   void _declineRequest(BuildContext context, Map<String, dynamic> request) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Decline Request?'),
-        content: Text('Are you sure you want to decline ${request['name']}\'s friend request?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Decline Request?'),
+            content: Text(
+              'Are you sure you want to decline ${request['name']}\'s friend request?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _declineFriendRequest(request);
+                },
+                child: const Text(
+                  'Decline',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement decline request logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Friend request from ${request['name']} declined')),
-              );
-            },
-            child: const Text('Decline', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _cancelRequest(BuildContext context, Map<String, dynamic> request) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Request?'),
-        content: Text('Are you sure you want to cancel your friend request to ${request['name']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep Request'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement cancel request logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Friend request cancelled')),
-              );
-            },
-            child: const Text('Cancel Request', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 
   void _viewProfile(BuildContext context, Map<String, dynamic> request) {
-    // TODO: Navigate to user profile
+    // Navigate to profile screen (currently shows current user's profile)
+    // Future Enhancement: Implement viewing other users' profiles by:
+    // 1. Modifying ProfileScreen to accept optional user parameter
+    // 2. Creating UserProfileScreen for viewing other users
+    // 3. Updating routes to pass user data (request['userId'])
+    // 4. Implementing privacy controls and permissions
+    // 5. Adding user profile API endpoints
+    Navigator.pushNamed(context, '/profile-screen');
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('View profile: ${request['name']}')),
+      SnackBar(
+        content: Text(
+          'Viewing user profiles coming soon! Currently showing your profile.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 }
 
-class SentRequestsTab extends StatelessWidget {
+class SentRequestsTab extends StatefulWidget {
   const SentRequestsTab({super.key});
 
-  // Mock sent requests
-  static const _sentRequests = [
+  @override
+  State<SentRequestsTab> createState() => _SentRequestsTabState();
+}
+
+class _SentRequestsTabState extends State<SentRequestsTab> {
+  // Mock sent requests - in a real app, this would come from a repository
+  final List<Map<String, dynamic>> _sentRequests = [
     {
       'id': '1',
       'name': 'Anna Davis',
       'username': 'annad',
-      'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+      'avatar':
+          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
     },
   ];
 
@@ -289,29 +318,39 @@ class SentRequestsTab extends StatelessWidget {
     final theme = Theme.of(context);
 
     return _sentRequests.isEmpty
-        ? _buildEmptyState(context, theme, 'No sent requests', 'Friend requests you\'ve sent will appear here.')
+        ? _buildEmptyState(
+          context,
+          theme,
+          'No sent requests',
+          'Friend requests you\'ve sent will appear here.',
+        )
         : ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.all(4.w),
-            itemCount: _sentRequests.length,
-            itemBuilder: (context, index) {
-              final request = _sentRequests[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: 2.w),
-                child: _buildRequestCard(context, theme, request, false),
-              );
-            },
-          );
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.all(4.w),
+          itemCount: _sentRequests.length,
+          itemBuilder: (context, index) {
+            final request = _sentRequests[index];
+            return Padding(
+              padding: EdgeInsets.only(bottom: 2.w),
+              child: _buildRequestCard(context, theme, request, false),
+            );
+          },
+        );
   }
 
-  Widget _buildRequestCard(BuildContext context, ThemeData theme, Map<String, dynamic> request, bool isReceived) {
+  Widget _buildRequestCard(
+    BuildContext context,
+    ThemeData theme,
+    Map<String, dynamic> request,
+    bool isReceived,
+  ) {
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -334,7 +373,7 @@ class SentRequestsTab extends StatelessWidget {
                 Text(
                   '@${request['username']}',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 if (request['mutualFriends'] != null) ...[
@@ -361,7 +400,7 @@ class SentRequestsTab extends StatelessWidget {
             onPressed: () => _viewProfile(context, request),
             icon: Icon(
               Icons.person_outline,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -372,39 +411,79 @@ class SentRequestsTab extends StatelessWidget {
   void _cancelRequest(BuildContext context, Map<String, dynamic> request) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Request?'),
-        content: Text('Are you sure you want to cancel your friend request to ${request['name']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep Request'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cancel Request?'),
+            content: Text(
+              'Are you sure you want to cancel your friend request to ${request['name']}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Keep Request'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _cancelFriendRequest(request);
+                },
+                child: const Text(
+                  'Cancel Request',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement cancel request logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Friend request to ${request['name']} cancelled')),
-              );
-            },
-            child: const Text('Cancel Request', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 
+  void _cancelFriendRequest(Map<String, dynamic> request) {
+    setState(() {
+      _sentRequests.removeWhere((r) => r['id'] == request['id']);
+    });
+
+    // In a real app, this would call a repository to cancel the friend request
+    // For now, show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Friend request to ${request['name']} cancelled'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   void _viewProfile(BuildContext context, Map<String, dynamic> request) {
-    // TODO: Navigate to user profile
+    // Navigate to profile screen (currently shows current user's profile)
+    // Future Enhancement: Implement viewing other users' profiles by:
+    // 1. Modifying ProfileScreen to accept optional user parameter
+    // 2. Creating UserProfileScreen for viewing other users
+    // 3. Updating routes to pass user data (request['userId'])
+    // 4. Implementing privacy controls and permissions
+    // 5. Adding user profile API endpoints
+    Navigator.pushNamed(context, '/profile-screen');
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('View profile: ${request['name']}')),
+      SnackBar(
+        content: Text(
+          'Viewing user profiles coming soon! Currently showing your profile.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 }
 
 // Common empty state widget
-Widget _buildEmptyState(BuildContext context, ThemeData theme, String title, String subtitle) {
+Widget _buildEmptyState(
+  BuildContext context,
+  ThemeData theme,
+  String title,
+  String subtitle,
+) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
