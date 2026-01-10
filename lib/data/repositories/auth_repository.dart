@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/models/auth_user.dart';
+import '../../core/exceptions/firebase_exceptions.dart';
 
 /// Abstract auth repository
 abstract class AuthRepository {
@@ -29,80 +31,100 @@ abstract class AuthRepository {
 
 /// Auth repository implementation
 class AuthRepositoryImpl implements AuthRepository {
-  // TODO: Implement with Firebase Auth
+  final FirebaseAuth _firebaseAuth;
+
+  AuthRepositoryImpl() : _firebaseAuth = FirebaseAuth.instance;
+
   @override
   Future<AuthUser> signIn(String email, String password) async {
-    // Mock implementation
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final result = await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    return AuthUser(
-      id: 'user_123',
-      email: email,
-      name: 'Test User',
-      createdAt: DateTime.now(),
-    );
+      return AuthUser(
+        id: result.user!.uid,
+        email: result.user!.email!,
+        name: result.user!.displayName,
+        avatarUrl: result.user!.photoURL,
+        createdAt: result.user!.metadata.creationTime!,
+        lastLoginAt: result.user!.metadata.lastSignInTime,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw FirebaseExceptions.handleFirebaseException(e);
+    }
   }
 
   @override
   Future<AuthUser> signUp(String email, String password, String name) async {
-    // Mock implementation
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final result = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    return AuthUser(
-      id: 'user_123',
-      email: email,
-      name: name,
-      createdAt: DateTime.now(),
-    );
+      // Update display name if provided
+      if (name.isNotEmpty) {
+        await result.user!.updateDisplayName(name);
+      }
+
+      return AuthUser(
+        id: result.user!.uid,
+        email: result.user!.email!,
+        name: name.isNotEmpty ? name : result.user!.displayName,
+        avatarUrl: result.user!.photoURL,
+        createdAt: result.user!.metadata.creationTime!,
+        lastLoginAt: result.user!.metadata.lastSignInTime,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw FirebaseExceptions.handleFirebaseException(e);
+    }
   }
 
   @override
   Future<AuthUser> signInWithGoogle() async {
-    // Mock implementation
-    await Future.delayed(const Duration(seconds: 1));
-
-    return AuthUser(
-      id: 'user_google_123',
-      email: 'user@gmail.com',
-      name: 'Google User',
-      createdAt: DateTime.now(),
-    );
+    // TODO: Implement Google Sign-In
+    throw UnimplementedError('Google Sign-In not yet implemented');
   }
 
   @override
   Future<AuthUser> signInWithApple() async {
-    // Mock implementation
-    await Future.delayed(const Duration(seconds: 1));
-
-    return AuthUser(
-      id: 'user_apple_123',
-      email: 'user@icloud.com',
-      name: 'Apple User',
-      createdAt: DateTime.now(),
-    );
+    // TODO: Implement Apple Sign-In
+    throw UnimplementedError('Apple Sign-In not yet implemented');
   }
 
   @override
   Future<void> signOut() async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 500));
+    await _firebaseAuth.signOut();
   }
 
   @override
   Future<AuthUser?> getCurrentUser() async {
-    // Mock implementation - return null for not signed in
-    return null;
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return null;
+
+    return AuthUser(
+      id: user.uid,
+      email: user.email!,
+      name: user.displayName,
+      avatarUrl: user.photoURL,
+      createdAt: user.metadata.creationTime!,
+      lastLoginAt: user.metadata.lastSignInTime,
+    );
   }
 
   @override
   Future<bool> isSignedIn() async {
-    // Mock implementation
-    return false;
+    return _firebaseAuth.currentUser != null;
   }
 
   @override
   Future<void> resetPassword(String email) async {
-    // Mock implementation
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw FirebaseExceptions.handleFirebaseException(e);
+    }
   }
 }

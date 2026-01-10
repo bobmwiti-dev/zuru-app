@@ -1,5 +1,6 @@
 import '../../domain/entities/mood.dart';
 import '../../domain/entities/journal_entry.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 /// Abstract analytics repository
 abstract class AnalyticsRepository {
@@ -18,10 +19,7 @@ abstract class AnalyticsRepository {
   });
 
   /// Log mood tracking
-  Future<void> logMoodTracking({
-    required String userId,
-    required Mood mood,
-  });
+  Future<void> logMoodTracking({required String userId, required Mood mood});
 
   /// Log journal entry creation
   Future<void> logJournalEntry({
@@ -56,30 +54,41 @@ abstract class AnalyticsRepository {
   Future<Map<String, dynamic>> getUserEngagementMetrics(String userId);
 
   /// Get mood analytics data
-  Future<Map<String, dynamic>> getMoodAnalytics(String userId, {
+  Future<Map<String, dynamic>> getMoodAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   });
 
   /// Get journal analytics data
-  Future<Map<String, dynamic>> getJournalAnalytics(String userId, {
+  Future<Map<String, dynamic>> getJournalAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   });
 
   /// Get location analytics data
-  Future<Map<String, dynamic>> getLocationAnalytics(String userId, {
+  Future<Map<String, dynamic>> getLocationAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   });
+
+  /// Set user properties for analytics
+  Future<void> setUserProperties({
+    required String userId,
+    Map<String, String>? properties,
+  });
+
+  /// Reset analytics data for a user
+  Future<void> resetAnalyticsData(String userId);
 }
 
 /// Analytics repository implementation
 class AnalyticsRepositoryImpl implements AnalyticsRepository {
-  // TODO: Implement with Firebase Analytics or other analytics service
-  // For now, using mock implementation
+  final FirebaseAnalytics _analytics;
 
-  final List<Map<String, dynamic>> _events = [];
+  AnalyticsRepositoryImpl(this._analytics);
 
   @override
   Future<void> logUserAction({
@@ -87,18 +96,8 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String action,
     Map<String, dynamic>? parameters,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'action': action,
-      'parameters': parameters,
-      'timestamp': DateTime.now(),
-      'type': 'user_action',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logEvent(name: action, parameters: parameters);
   }
 
   @override
@@ -107,18 +106,12 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String screenName,
     Map<String, dynamic>? parameters,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'screenName': screenName,
-      'parameters': parameters,
-      'timestamp': DateTime.now(),
-      'type': 'screen_view',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logScreenView(
+      screenName: screenName,
+      screenClass: screenName,
+      parameters: parameters,
+    );
   }
 
   @override
@@ -126,17 +119,11 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String userId,
     required Mood mood,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'mood': mood.toJson(),
-      'timestamp': DateTime.now(),
-      'type': 'mood_tracking',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logEvent(
+      name: AnalyticsEvents.moodLogged,
+      parameters: {AnalyticsParameters.moodType: mood.type.name},
+    );
   }
 
   @override
@@ -144,17 +131,11 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String userId,
     required JournalEntry entry,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'entryId': entry.id,
-      'timestamp': DateTime.now(),
-      'type': 'journal_entry',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logEvent(
+      name: AnalyticsEvents.journalCreated,
+      parameters: {AnalyticsParameters.entryId: entry.id},
+    );
   }
 
   @override
@@ -164,19 +145,14 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String searchType,
     int resultCount = 0,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'query': query,
-      'searchType': searchType,
-      'resultCount': resultCount,
-      'timestamp': DateTime.now(),
-      'type': 'search',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logSearch(
+      searchTerm: query,
+      parameters: {
+        'search_type': searchType,
+        AnalyticsParameters.resultCount: resultCount,
+      },
+    );
   }
 
   @override
@@ -186,19 +162,15 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     String? errorCode,
     Map<String, dynamic>? context,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final event = {
-      'userId': userId,
-      'errorMessage': errorMessage,
-      'errorCode': errorCode,
-      'context': context,
-      'timestamp': DateTime.now(),
-      'type': 'error',
-    };
-
-    _events.add(event);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logEvent(
+      name: 'error_occurred',
+      parameters: {
+        'error_message': errorMessage,
+        AnalyticsParameters.errorCode: errorCode,
+        'error_context': context,
+      },
+    );
   }
 
   @override
@@ -207,136 +179,108 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required String event,
     Map<String, dynamic>? parameters,
   }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    final lifecycleEvent = {
-      'userId': userId,
-      'event': event,
-      'parameters': parameters,
-      'timestamp': DateTime.now(),
-      'type': 'app_lifecycle',
-    };
-
-    _events.add(lifecycleEvent);
+    await _analytics.setUserId(id: userId);
+    await _analytics.logEvent(
+      name: 'app_lifecycle',
+      parameters: {'lifecycle_event': event, ...?parameters},
+    );
   }
 
   @override
   Future<Map<String, dynamic>> getUserEngagementMetrics(String userId) async {
-    // Mock implementation
+    // Firebase Analytics doesn't provide historical data retrieval
+    // In a production app, you would use Firebase Analytics data export to BigQuery
+    // or integrate with another analytics service for historical data analysis
+    // For now, returning mock data
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final userEvents = _events.where((event) => event['userId'] == userId).toList();
-
-    final screenViews = userEvents.where((event) => event['type'] == 'screen_view').length;
-    final journalEntries = userEvents.where((event) => event['type'] == 'journal_entry').length;
-    final moodTrackings = userEvents.where((event) => event['type'] == 'mood_tracking').length;
-    final searches = userEvents.where((event) => event['type'] == 'search').length;
-
     return {
-      'totalScreenViews': screenViews,
-      'totalJournalEntries': journalEntries,
-      'totalMoodTrackings': moodTrackings,
-      'totalSearches': searches,
-      'engagementScore': (screenViews + journalEntries * 2 + moodTrackings + searches) / 10.0,
+      'totalScreenViews': 25,
+      'totalJournalEntries': 12,
+      'totalMoodTrackings': 8,
+      'totalSearches': 5,
+      'engagementScore': 6.2,
     };
   }
 
   @override
-  Future<Map<String, dynamic>> getMoodAnalytics(String userId, {
+  Future<Map<String, dynamic>> getMoodAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    // Mock implementation
+    // Firebase Analytics doesn't provide historical data retrieval
+    // In a production app, you would use Firebase Analytics data export to BigQuery
+    // or integrate with another analytics service for historical data analysis
+    // For now, returning mock data
     await Future.delayed(const Duration(milliseconds: 400));
 
-    final userEvents = _events.where((event) => event['userId'] == userId).toList();
-    final moodEvents = userEvents.where((event) => event['type'] == 'mood_tracking').toList();
-
-    final moodCounts = <String, int>{};
-    for (final event in moodEvents) {
-      final moodData = event['mood'] as Map<String, dynamic>;
-      final moodType = moodData['moodType'] as String;
-      moodCounts[moodType] = (moodCounts[moodType] ?? 0) + 1;
-    }
-
-    final mostCommonMood = moodCounts.isNotEmpty
-        ? moodCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key
-        : null;
-
     return {
-      'totalMoodTrackings': moodEvents.length,
-      'moodDistribution': moodCounts,
-      'mostCommonMood': mostCommonMood,
-      'averageMoodScore': _calculateAverageMoodScore(moodEvents),
+      'totalMoodTrackings': 15,
+      'moodDistribution': {'good': 8, 'excellent': 4, 'neutral': 3},
+      'mostCommonMood': 'good',
+      'averageMoodScore': 4.1,
     };
   }
 
   @override
-  Future<Map<String, dynamic>> getJournalAnalytics(String userId, {
+  Future<Map<String, dynamic>> getJournalAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    // Mock implementation
+    // Firebase Analytics doesn't provide historical data retrieval
+    // In a production app, you would use Firebase Analytics data export to BigQuery
+    // or integrate with another analytics service for historical data analysis
+    // For now, returning mock data
     await Future.delayed(const Duration(milliseconds: 400));
 
-    final userEvents = _events.where((event) => event['userId'] == userId).toList();
-    final journalEvents = userEvents.where((event) => event['type'] == 'journal_entry').toList();
-
     return {
-      'totalEntries': journalEvents.length,
-      'entriesThisWeek': _countEntriesInDateRange(journalEvents, DateTime.now().subtract(const Duration(days: 7)), DateTime.now()),
-      'entriesThisMonth': _countEntriesInDateRange(journalEvents, DateTime.now().subtract(const Duration(days: 30)), DateTime.now()),
-      'averageEntriesPerWeek': journalEvents.length / 4.0, // Rough estimate
+      'totalEntries': 24,
+      'entriesThisWeek': 3,
+      'entriesThisMonth': 12,
+      'averageEntriesPerWeek': 2.8,
     };
   }
 
   @override
-  Future<Map<String, dynamic>> getLocationAnalytics(String userId, {
+  Future<Map<String, dynamic>> getLocationAnalytics(
+    String userId, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    // Mock implementation
+    // Firebase Analytics doesn't provide historical data retrieval
+    // In a production app, you would use Firebase Analytics data export to BigQuery
+    // or integrate with another analytics service for historical data analysis
+    // For now, returning mock data
     await Future.delayed(const Duration(milliseconds: 400));
 
-    // Would analyze location-based events
     return {
-      'uniquePlacesVisited': 5,
+      'uniquePlacesVisited': 8,
       'mostVisitedCategory': 'restaurant',
-      'averageDistanceTraveled': 15.5, // km
+      'averageDistanceTraveled': 22.3, // km
       'locationInsights': [],
     };
   }
 
-  double _calculateAverageMoodScore(List<Map<String, dynamic>> moodEvents) {
-    if (moodEvents.isEmpty) return 0.0;
+  @override
+  Future<void> setUserProperties({
+    required String userId,
+    Map<String, String>? properties,
+  }) async {
+    await _analytics.setUserId(id: userId);
 
-    final moodScores = moodEvents.map((event) {
-      final moodData = event['mood'] as Map<String, dynamic>;
-      final moodType = moodData['moodType'] as String;
-      return _getMoodScore(moodType);
-    }).toList();
-
-    return moodScores.reduce((a, b) => a + b) / moodScores.length;
-  }
-
-  double _getMoodScore(String moodType) {
-    // Simple scoring system
-    switch (moodType) {
-      case 'excellent': return 5.0;
-      case 'good': return 4.0;
-      case 'neutral': return 3.0;
-      case 'bad': return 2.0;
-      case 'terrible': return 1.0;
-      default: return 3.0;
+    if (properties != null) {
+      for (final entry in properties.entries) {
+        await _analytics.setUserProperty(name: entry.key, value: entry.value);
+      }
     }
   }
 
-  int _countEntriesInDateRange(List<Map<String, dynamic>> events, DateTime start, DateTime end) {
-    return events.where((event) {
-      final timestamp = event['timestamp'] as DateTime;
-      return timestamp.isAfter(start) && timestamp.isBefore(end);
-    }).length;
+  @override
+  Future<void> resetAnalyticsData(String userId) async {
+    await _analytics.resetAnalyticsData();
+    await _analytics.setUserId(id: null);
   }
 }
 
