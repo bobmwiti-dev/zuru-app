@@ -1,6 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:zuru_app/app/theme/app_theme.dart';
 import 'package:zuru_app/presentation/screens/authentication_screen/screen.dart';
@@ -11,6 +11,9 @@ import 'package:zuru_app/data/repositories/auth_repository.dart';
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
 
   runApp(
     ProviderScope(
