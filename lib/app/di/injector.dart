@@ -2,19 +2,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../core/logging/logger.dart';
 import '../../core/cache/cache_manager.dart';
 import '../../core/analytics/app_analytics.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../providers/auth_provider.dart';
 import '../../data/repositories/journal_repository.dart';
 import '../../data/repositories/analytics_repository.dart';
 import '../../data/datasources/local/shared_preferences_datasource.dart';
+import '../../data/datasources/remote/auth/firebase_auth_datasource.dart';
+import '../../data/datasources/remote/firestore/journal_firestore_datasource.dart';
+import '../../data/datasources/remote/storage/firebase_storage_datasource.dart';
 import '../../services/location_service.dart';
 import '../../services/media_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../domain/usecases/create_journal_entry.dart';
+import '../../domain/usecases/get_journal_entries.dart';
+import '../../domain/usecases/sign_in.dart';
+import '../../domain/usecases/sign_out.dart';
+import '../../domain/usecases/get_mood_trends.dart';
+import '../../domain/usecases/send_message.dart';
+import '../../domain/usecases/get_messages.dart';
+import '../../data/repositories/message_repository.dart';
 
 /// Core service providers
 
@@ -50,7 +63,20 @@ final sharedPreferencesDataSourceProvider =
       return SharedPreferencesDataSource(sharedPrefs, logger);
     });
 
-// TODO: Add Firebase data sources when Firebase packages are installed
+/// Firebase data sources
+final firebaseAuthDataSourceProvider = Provider<FirebaseAuthDataSource>((ref) {
+  return FirebaseAuthDataSource();
+});
+
+final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
+  return FirestoreDataSource();
+});
+
+final firebaseStorageDataSourceProvider = Provider<FirebaseStorageDataSource>((
+  ref,
+) {
+  return FirebaseStorageDataSource();
+});
 
 /// Repository providers
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -58,15 +84,22 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final journalRepositoryProvider = Provider<JournalRepository>((ref) {
-  return JournalRepositoryImpl();
+  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
+  return JournalRepositoryImpl(firestoreDataSource);
 });
 
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {
   return LocationRepositoryImpl();
 });
 
+/// Firebase Analytics provider
+final firebaseAnalyticsProvider = Provider<FirebaseAnalytics>((ref) {
+  return FirebaseAnalytics.instance;
+});
+
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepositoryImpl();
+  final analytics = ref.watch(firebaseAnalyticsProvider);
+  return AnalyticsRepositoryImpl(analytics);
 });
 
 /// Service providers
@@ -102,29 +135,43 @@ final cacheManagerProvider = Provider<CacheManager>((ref) {
 final appAnalyticsProvider = Provider<AppAnalytics>((ref) {
   final analyticsRepo = ref.watch(analyticsRepositoryProvider);
   final logger = ref.watch(loggerProvider);
-  // TODO: Pass current user ID getter when auth is properly implemented
-  return AppAnalytics(analyticsRepo, logger);
+
+  // Get current user ID from auth state
+  String getCurrentUserId() {
+    final authState = ref.read(authStateProvider);
+    return switch (authState) {
+      AuthAuthenticated(user: final user) => user.id,
+      _ => 'anonymous',
+    };
+  }
+
+  return AppAnalytics(analyticsRepo, logger, getCurrentUserId);
 });
 
 /// Use case providers
 final createJournalEntryUseCaseProvider = Provider<CreateJournalEntry>((ref) {
-  return CreateJournalEntryImpl();
+  final repository = ref.watch(journalRepositoryProvider);
+  return CreateJournalEntryImpl(repository);
 });
 
 final getJournalEntriesUseCaseProvider = Provider<GetJournalEntries>((ref) {
-  return GetJournalEntriesImpl();
+  final repository = ref.watch(journalRepositoryProvider);
+  return GetJournalEntriesImpl(repository);
 });
 
 final signInUseCaseProvider = Provider<SignIn>((ref) {
-  return SignInImpl();
+  final repository = ref.watch(authRepositoryProvider);
+  return SignInImpl(repository);
 });
 
 final signOutUseCaseProvider = Provider<SignOut>((ref) {
-  return SignOutImpl();
+  final repository = ref.watch(authRepositoryProvider);
+  return SignOutImpl(repository);
 });
 
 final getMoodTrendsUseCaseProvider = Provider<GetMoodTrends>((ref) {
-  return GetMoodTrendsImpl();
+  final repository = ref.watch(analyticsRepositoryProvider);
+  return GetMoodTrendsImpl(repository);
 });
 
 /// Provider overrides for testing
@@ -202,3 +249,23 @@ extension ProviderContainerExtensions on ProviderContainer {
   /// Get logger
   Logger get logger => read(loggerProvider);
 }
+
+/// Messaging providers
+final firestoreProvider = Provider<FirebaseFirestore>((ref) {
+  return FirebaseFirestore.instance;
+});
+
+final messageRepositoryProvider = Provider<MessageRepository>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return MessageRepositoryImpl(firestore);
+});
+
+final sendMessageUseCaseProvider = Provider<SendMessage>((ref) {
+  final repository = ref.watch(messageRepositoryProvider);
+  return SendMessageImpl(repository);
+});
+
+final getMessagesUseCaseProvider = Provider<GetMessages>((ref) {
+  final repository = ref.watch(messageRepositoryProvider);
+  return GetMessagesImpl(repository);
+});
