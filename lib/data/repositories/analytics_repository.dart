@@ -97,7 +97,17 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     Map<String, dynamic>? parameters,
   }) async {
     await _analytics.setUserId(id: userId);
-    await _analytics.logEvent(name: action, parameters: parameters);
+
+    // Convert parameters to Map<String, Object> and filter out null values
+    final Map<String, Object>? validParameters = parameters != null
+        ? Map.fromEntries(
+            parameters.entries
+                .where((entry) => entry.value != null)
+                .map((entry) => MapEntry(entry.key, entry.value as Object)),
+          )
+        : null;
+
+    await _analytics.logEvent(name: action, parameters: validParameters);
   }
 
   @override
@@ -107,10 +117,20 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     Map<String, dynamic>? parameters,
   }) async {
     await _analytics.setUserId(id: userId);
+
+    // Convert parameters to Map<String, Object> and filter out null values
+    final Map<String, Object>? validParameters = parameters != null
+        ? Map.fromEntries(
+            parameters.entries
+                .where((entry) => entry.value != null)
+                .map((entry) => MapEntry(entry.key, entry.value as Object)),
+          )
+        : null;
+
     await _analytics.logScreenView(
       screenName: screenName,
       screenClass: screenName,
-      parameters: parameters,
+      parameters: validParameters,
     );
   }
 
@@ -163,13 +183,23 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     Map<String, dynamic>? context,
   }) async {
     await _analytics.setUserId(id: userId);
+
+    // Build parameters map, filtering out null values
+    final Map<String, Object> parameters = {
+      'error_message': errorMessage,
+    };
+
+    if (errorCode != null) {
+      parameters[AnalyticsParameters.errorCode] = errorCode;
+    }
+
+    if (context != null) {
+      parameters['error_context'] = context;
+    }
+
     await _analytics.logEvent(
       name: 'error_occurred',
-      parameters: {
-        'error_message': errorMessage,
-        AnalyticsParameters.errorCode: errorCode,
-        'error_context': context,
-      },
+      parameters: parameters,
     );
   }
 
