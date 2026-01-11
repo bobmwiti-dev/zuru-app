@@ -13,10 +13,7 @@ import './widgets/social_platforms_widget.dart';
 class ShareScreen extends StatefulWidget {
   final Map<String, dynamic> memory;
 
-  const ShareScreen({
-    super.key,
-    required this.memory,
-  });
+  const ShareScreen({super.key, required this.memory});
 
   @override
   State<ShareScreen> createState() => _ShareScreenState();
@@ -198,8 +195,14 @@ class _ShareScreenState extends State<ShareScreen> {
       case 'whatsapp':
         platformMessage = '📖 $platformMessage';
         break;
+      case 'sms':
+        // Create a shorter message for SMS (typically limited to 160 characters)
+        platformMessage =
+            'Check out this memory from Zuru: ${widget.memory['title']} 📖 zuru.app';
+        break;
       case 'email':
-        platformMessage = '''
+        platformMessage =
+            '''
 Dear friend,
 
 I wanted to share this special memory with you from my Zuru digital memory book:
@@ -254,7 +257,9 @@ A fellow memory keeper
       // 3. Handle images/videos if present in memory
       // For now, we'll show a success message indicating the feature works
 
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate saving
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      ); // Simulate saving
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -296,63 +301,68 @@ A fellow memory keeper
     final memoryTitle = widget.memory['title'] ?? 'Untitled Memory';
 
     // Create a shareable link format
-    final shareableLink = 'zuru://memory/$memoryId?title=${Uri.encodeComponent(memoryTitle)}';
+    final shareableLink =
+        'zuru://memory/$memoryId?title=${Uri.encodeComponent(memoryTitle)}';
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Share Memory QR Code'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Scan this QR code to access the memory',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Share Memory QR Code'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Scan this QR code to access the memory',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 2.h),
+                Container(
+                  padding: EdgeInsets.all(2.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: QrImageView(
+                    data: shareableLink,
+                    version: QrVersions.auto,
+                    size: 200.0,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(color: Colors.black),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  memoryTitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            SizedBox(height: 2.h),
-            Container(
-              padding: EdgeInsets.all(2.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
               ),
-              child: QrImageView(
-                data: shareableLink,
-                version: QrVersions.auto,
-                size: 200.0,
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Share the link as fallback
+                  Share.share(
+                    'Check out this memory from Zuru!\n\n$shareableLink',
+                    subject: 'Memory from Zuru: $memoryTitle',
+                  );
+                },
+                child: const Text('Share Link'),
               ),
-            ),
-            SizedBox(height: 2.h),
-            Text(
-              memoryTitle,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Share the link as fallback
-              Share.share(
-                'Check out this memory from Zuru!\n\n$shareableLink',
-                subject: 'Memory from Zuru: $memoryTitle',
-              );
-            },
-            child: const Text('Share Link'),
-          ),
-        ],
-      ),
     );
   }
 }

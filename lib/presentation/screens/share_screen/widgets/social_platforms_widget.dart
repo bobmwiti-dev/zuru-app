@@ -321,12 +321,12 @@ class SocialPlatformsWidget extends StatelessWidget {
   }
 
   void _shareViaEmail() {
-    // TODO: Implement email sharing
+    // Share via email - implemented in parent screen
     onPlatformSelected('email');
   }
 
   void _shareViaSMS() {
-    // TODO: Implement SMS sharing
+    // Share via SMS - implemented in parent screen
     onPlatformSelected('sms');
   }
 
