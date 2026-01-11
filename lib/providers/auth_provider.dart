@@ -64,6 +64,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Sign in with Google
+  Future<void> signInWithGoogle() async {
+    state = const AuthState.loading();
+    try {
+      final user = await _authRepository.signInWithGoogle();
+      state = AuthState.authenticated(user);
+    } catch (e) {
+      state = AuthState.error(e.toString());
+      rethrow;
+    }
+  }
+
+  // Sign in with Apple
+  Future<void> signInWithApple() async {
+    state = const AuthState.loading();
+    try {
+      final user = await _authRepository.signInWithApple();
+      state = AuthState.authenticated(user);
+    } catch (e) {
+      state = AuthState.error(e.toString());
+      rethrow;
+    }
+  }
+
   // Sign in with external authentication (Google, Apple, etc.)
   void signInWithExternalAuth(AuthUser user) {
     state = AuthState.authenticated(user);

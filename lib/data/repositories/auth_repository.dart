@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../domain/models/auth_user.dart';
 import '../../core/exceptions/firebase_exceptions.dart';
+import '../../core/exceptions/app_exception.dart';
 
 /// Abstract auth repository
 abstract class AuthRepository {
@@ -84,14 +87,127 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser> signInWithGoogle() async {
-    // TODO: Implement Google Sign-In
-    throw UnimplementedError('Google Sign-In not yet implemented');
+    try {
+      // Initialize Google Sign-In
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+      );
+
+      // Start the sign-in process
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        throw AuthenticationException(
+          message: 'Google Sign-In was cancelled',
+          code: 'google_signin_cancelled',
+        );
+      }
+
+      // Get authentication credentials
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create Firebase credential
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final UserCredential userCredential = await _firebaseAuth
+          .signInWithCredential(credential);
+
+      final User? user = userCredential.user;
+
+      if (user == null) {
+        throw AuthenticationException(
+          message: 'Google Sign-In failed: No user returned',
+          code: 'google_signin_no_user',
+        );
+      }
+
+      // Create AuthUser from Firebase user
+      return AuthUser(
+        email: user.email ?? '',
+        name: user.displayName ?? 'Google User',
+        avatarUrl: user.photoURL,
+        createdAt: user.metadata.creationTime ?? DateTime.now(),
+        lastLoginAt: user.metadata.lastSignInTime ?? DateTime.now(),
+      );
+    } catch (e) {
+      if (e is AuthenticationException) {
+        rethrow;
+      }
+      throw AuthenticationException(
+        message: 'Google Sign-In failed: ${e.toString()}',
+        code: 'google_signin_failed',
+        originalException: e,
+      );
+    }
   }
 
   @override
   Future<AuthUser> signInWithApple() async {
-    // TODO: Implement Apple Sign-In
-    throw UnimplementedError('Apple Sign-In not yet implemented');
+    try {
+      // Request Apple Sign-In credentials
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      // Create OAuth credential for Firebase
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      // Sign in to Firebase with the Apple credential
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        oauthCredential,
+      );
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw AuthenticationException(
+          message: 'Apple Sign-In failed: No user returned',
+          code: 'apple_signin_no_user',
+        );
+      }
+
+      // Create AuthUser from Firebase user
+      // Apple may not always provide name/email on subsequent sign-ins
+      final displayName =
+          user.displayName ??
+          (appleCredential.givenName != null &&
+                  appleCredential.familyName != null
+              ? '${appleCredential.givenName} ${appleCredential.familyName}'
+              : 'Apple User');
+
+      final email = user.email ?? appleCredential.email ?? '';
+
+      return AuthUser(
+        email: email,
+        name: displayName,
+        avatarUrl: user.photoURL,
+        createdAt: user.metadata.creationTime ?? DateTime.now(),
+        lastLoginAt: user.metadata.lastSignInTime ?? DateTime.now(),
+      );
+    } catch (e) {
+      if (e is SignInWithAppleAuthorizationException) {
+        throw AuthenticationException(
+          message: 'Apple Sign-In was cancelled or failed: ${e.message}',
+          code: 'apple_signin_cancelled',
+          originalException: e,
+        );
+      }
+      throw AuthenticationException(
+        message: 'Apple Sign-In failed: ${e.toString()}',
+        code: 'apple_signin_failed',
+        originalException: e,
+      );
+    }
   }
 
   @override
