@@ -563,13 +563,18 @@ class _FindFriendsWidgetState extends State<FindFriendsWidget> {
 
   void _viewProfile(BuildContext context, Map<String, dynamic> user) {
     // Navigate to profile screen (currently shows current user's profile)
-    // TODO: Implement viewing other users' profiles when user profile system is expanded
+    // Future enhancement: Implement viewing other users' profiles when user profile system is expanded
+    // - Modify ProfileScreen to accept an optional user parameter (e.g., ProfileScreen(userId: user['id']))
+    // - Create a dedicated UserProfileScreen for viewing other users' profiles
+    // - Update AppRoutes to pass the user data (e.g., arguments: {'userId': user['id']})
+    // - Implement privacy controls and permissions for viewing other users' data
+    // - Add user profile API endpoints to fetch other users' data
     Navigator.pushNamed(context, '/profile-screen');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Viewing user profiles coming soon! Currently showing your profile.',
+          'Viewing ${user['name']}\'s profile coming soon! Currently showing your profile.',
         ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),

@@ -271,27 +271,6 @@ class _ReceivedRequestsTabState extends State<ReceivedRequestsTab> {
           ),
     );
   }
-
-  void _viewProfile(BuildContext context, Map<String, dynamic> request) {
-    // Navigate to profile screen (currently shows current user's profile)
-    // Future Enhancement: Implement viewing other users' profiles by:
-    // 1. Modifying ProfileScreen to accept optional user parameter
-    // 2. Creating UserProfileScreen for viewing other users
-    // 3. Updating routes to pass user data (request['userId'])
-    // 4. Implementing privacy controls and permissions
-    // 5. Adding user profile API endpoints
-    Navigator.pushNamed(context, '/profile-screen');
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Viewing user profiles coming soon! Currently showing your profile.',
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 }
 
 class SentRequestsTab extends StatefulWidget {
