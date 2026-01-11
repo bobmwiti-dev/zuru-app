@@ -80,6 +80,30 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
 
     // Initialize error message from widget parameter
     _errorMessage = widget.error;
+
+    // Listen to auth state changes to update error messages
+    ref.listen<AuthState>(authStateProvider, (previous, next) {
+      if (next is AuthError && mounted) {
+        setState(() {
+          _errorMessage = next.message;
+        });
+      } else if (next is AuthLoading && mounted) {
+        setState(() {
+          _errorMessage = null; // Clear errors when loading starts
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(AuthenticationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update error message when widget parameter changes
+    if (oldWidget.error != widget.error) {
+      setState(() {
+        _errorMessage = widget.error;
+      });
+    }
   }
 
   @override
