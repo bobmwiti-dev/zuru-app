@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 /// Environment configuration for the app
 /// Manages different settings for dev, staging, and production
@@ -146,6 +147,18 @@ class FirebaseConfig {
       'messagingSenderId': messagingSenderId,
       'appId': appId,
     };
+  }
+
+  /// Convert to FirebaseOptions for initialization
+  FirebaseOptions toFirebaseOptions() {
+    return FirebaseOptions(
+      apiKey: apiKey,
+      authDomain: authDomain,
+      projectId: projectId,
+      storageBucket: storageBucket,
+      messagingSenderId: messagingSenderId,
+      appId: appId,
+    );
   }
 }
 
