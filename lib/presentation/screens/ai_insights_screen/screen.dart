@@ -29,13 +29,25 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
         title: 'AI Insights',
         actions: [
           IconButton(
-            icon: CustomIconWidget(
-              iconName: 'refresh',
-              color: theme.colorScheme.onSurface,
-              size: 24,
-            ),
-            onPressed: _refreshInsights,
-            tooltip: 'Refresh Insights',
+            icon:
+                _isRefreshing
+                    ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.primary,
+                        ),
+                      ),
+                    )
+                    : CustomIconWidget(
+                      iconName: 'refresh',
+                      color: theme.colorScheme.onSurface,
+                      size: 24,
+                    ),
+            onPressed: _isRefreshing ? null : _refreshInsights,
+            tooltip: _isRefreshing ? 'Refreshing...' : 'Refresh Insights',
           ),
         ],
       ),
