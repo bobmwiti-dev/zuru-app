@@ -1,125 +1,149 @@
-import 'dart:math';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/exceptions/app_exception.dart';
+import '../models/journal_model.dart';
 import '../../domain/entities/journal_entry.dart';
 import '../../domain/entities/place.dart';
-import '../../domain/entities/mood.dart';
-import '../../data/models/journal_entry_model.dart';
-import '../../data/models/place_model.dart';
-import '../../data/models/mood_model.dart';
-import '../../data/datasources/remote/firestore/journal_firestore_datasource.dart';
+import 'firestore_repository.dart';
 
-/// Abstract journal repository
-abstract class JournalRepository {
+/// Repository for journal/memory operations
+class JournalRepository extends FirestoreRepository {
+  static const String _journalsCollection = 'journals';
+
+  /// Create a new journal entry from domain entity
+  Future<JournalEntry> createEntry(JournalEntry entry) async {
+    // Convert JournalEntry to JournalModel
+    final journalModel = JournalModel(
+      id: entry.id,
+      userId: entry.userId,
+      title: entry.title,
+      content: entry.description,
+      mood: entry.mood?.displayName,
+      latitude: entry.place.latitude,
+      longitude: entry.place.longitude,
+      locationName: entry.place.name,
+      photos: entry.photos,
+      tags: entry.tags,
+      isPublic: entry.privacyLevel == PrivacyLevel.public,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    );
+
+    final createdModel = await createJournal(journalModel);
+
+    // Convert back to JournalEntry
+    return entry.copyWith(id: createdModel.id ?? entry.id);
+  }
+
   /// Create a new journal entry
-  Future<JournalEntry> createEntry(JournalEntry entry);
+  Future<JournalModel> createJournal(JournalModel journal) async {
+    return await executeOperation(() async {
+      final docRef = await addDocument(_journalsCollection, journal.toJson());
+      final newJournal = journal.copyWith(id: docRef.id);
 
-  /// Get journal entry by ID
-  Future<JournalEntry?> getEntry(String id);
+      // Update user stats
+      await _updateUserJournalCount(currentUserId!);
 
-  /// Get all journal entries for a user
-  Future<List<JournalEntry>> getEntries({
-    required String userId,
-    DateTime? startDate,
-    DateTime? endDate,
-    int? limit,
-    int? offset,
-  });
+      return newJournal;
+    });
+  }
+
+  /// Get journal by ID
+  Future<JournalModel?> getJournal(String journalId) async {
+    return await executeOperation(() async {
+      final docSnapshot = await getDocument('$_journalsCollection/$journalId');
+
+      if (!docSnapshot.exists || docSnapshot.data() == null) {
+        return null;
+      }
+
+      final data = docSnapshot.data()!;
+      if (data['isDeleted'] == true) {
+        return null; // Soft deleted
+      }
+
+      return JournalModel.fromJson({
+        ...data,
+        'id': docSnapshot.id,
+      });
+    });
+  }
 
   /// Update journal entry
-  Future<JournalEntry> updateEntry(JournalEntry entry);
+  Future<JournalModel> updateJournal(String journalId, Map<String, dynamic> updates) async {
+    return await executeOperation(() async {
+      await updateDocument('$_journalsCollection/$journalId', updates);
 
-  /// Delete journal entry
-  Future<void> deleteEntry(String id);
+      // Get updated journal
+      final updatedJournal = await getJournal(journalId);
+      if (updatedJournal == null) {
+        throw DataException(message: 'Failed to retrieve updated journal');
+      }
 
-  /// Search journal entries
-  Future<List<JournalEntry>> searchEntries({
-    required String userId,
-    required String query,
-    DateTime? startDate,
-    DateTime? endDate,
-  });
-
-  /// Get entries by mood
-  Future<List<JournalEntry>> getEntriesByMood({
-    required String userId,
-    required MoodType mood,
-    DateTime? startDate,
-    DateTime? endDate,
-  });
-
-  /// Get entries by place
-  Future<List<JournalEntry>> getEntriesByPlace({
-    required String userId,
-    required String placeId,
-  });
-
-  /// Get entries by tags
-  Future<List<JournalEntry>> getEntriesByTags({
-    required String userId,
-    required List<String> tags,
-  });
-
-  /// Get recent entries
-  Future<List<JournalEntry>> getRecentEntries({
-    required String userId,
-    int limit = 10,
-  });
-
-  /// Get entries count
-  Future<int> getEntriesCount({
-    required String userId,
-    DateTime? startDate,
-    DateTime? endDate,
-  });
-}
-
-/// Journal repository implementation
-class JournalRepositoryImpl implements JournalRepository {
-  final FirestoreDataSource _firestoreDataSource;
-
-  JournalRepositoryImpl(this._firestoreDataSource);
-
-  @override
-  Future<JournalEntry> createEntry(JournalEntry entry) async {
-    final entryData = {
-      'id': entry.id,
-      'userId': entry.userId,
-      'title': entry.title,
-      'description': entry.description,
-      'photos': entry.photos,
-      'videos': entry.videos,
-      'rating': entry.rating,
-      'tags': entry.tags,
-      'mood':
-          entry.mood != null
-              ? MoodModel.fromEntity(entry.mood!).toJson()
-              : null,
-      'place': PlaceModel.fromEntity(entry.place).toJson(),
-      'privacyLevel': entry.privacyLevel.name,
-      'reflection': entry.reflection,
-      'metadata': entry.metadata,
-      'companionIds': entry.companionIds,
-      'cost': entry.cost,
-      'weather': entry.weather,
-      'temperature': entry.temperature,
-    };
-
-    final docRef = await _firestoreDataSource.createJournalEntry(entryData);
-    return entry.copyWith(id: docRef.id);
+      return updatedJournal;
+    });
   }
 
-  @override
-  Future<JournalEntry?> getEntry(String id) async {
-    final docSnapshot = await _firestoreDataSource.getJournalEntry(id);
-    if (!docSnapshot.exists || docSnapshot.data() == null) {
-      return null;
-    }
+  /// Delete journal entry (soft delete)
+  Future<void> deleteJournal(String journalId) async {
+    return await executeOperation(() async {
+      await updateDocument('$_journalsCollection/$journalId', {
+        'isDeleted': true,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
 
-    final data = docSnapshot.data()!;
-    return JournalEntryModel.fromJson(data).toEntity();
+      // Update user stats
+      await _updateUserJournalCount(currentUserId!);
+    });
   }
 
-  @override
+  /// Get user's journals
+  Future<List<JournalModel>> getUserJournals({
+    String? userId,
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+    String? mood,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final targetUserId = userId ?? currentUserId;
+    if (targetUserId == null) return [];
+
+    return await executeOperation(() async {
+      Query<Map<String, dynamic>> query = collection(_journalsCollection)
+          .where('userId', isEqualTo: targetUserId)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      // Apply filters
+      if (mood != null) {
+        query = query.where('mood', isEqualTo: mood);
+      }
+
+      if (startDate != null) {
+        query = query.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+
+      if (endDate != null) {
+        query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final querySnapshot = await query.get();
+
+      return querySnapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .toList();
+    });
+  }
+
+  /// Get journal entries as domain entities
   Future<List<JournalEntry>> getEntries({
     required String userId,
     DateTime? startDate,
@@ -127,442 +151,237 @@ class JournalRepositoryImpl implements JournalRepository {
     int? limit,
     int? offset,
   }) async {
-    final querySnapshot = await _firestoreDataSource.getUserJournalEntries(
-      userId,
+    final journals = await getUserJournals(
+      userId: userId,
+      limit: limit ?? 20,
       startDate: startDate,
       endDate: endDate,
-      limit: limit,
     );
 
-    final entries =
-        querySnapshot.docs.map((doc) {
-          return JournalEntryModel.fromJson(doc.data()).toEntity();
-        }).toList();
+    // Convert JournalModel to JournalEntry
+    return journals.map((model) {
+      // Create Place from location data
+      final place = Place(
+        id: model.id ?? 'unknown',
+        name: model.locationName ?? 'Unknown Location',
+        latitude: model.latitude ?? 0.0,
+        longitude: model.longitude ?? 0.0,
+        category: PlaceCategory.other,
+        address: model.locationName,
+      );
 
-    // Apply offset if specified
-    if (offset != null && offset > 0 && entries.length > offset) {
-      return entries.sublist(offset);
-    }
+      // Determine privacy level
+      final privacyLevel = model.isPublic 
+          ? PrivacyLevel.public 
+          : PrivacyLevel.private;
 
-    return entries;
-  }
-
-  @override
-  Future<JournalEntry> updateEntry(JournalEntry entry) async {
-    final updates = {
-      'title': entry.title,
-      'description': entry.description,
-      'photos': entry.photos,
-      'videos': entry.videos,
-      'rating': entry.rating,
-      'tags': entry.tags,
-      'mood':
-          entry.mood != null
-              ? MoodModel.fromEntity(entry.mood!).toJson()
-              : null,
-      'place': PlaceModel.fromEntity(entry.place).toJson(),
-      'privacyLevel': entry.privacyLevel.name,
-      'reflection': entry.reflection,
-      'metadata': entry.metadata,
-      'companionIds': entry.companionIds,
-      'cost': entry.cost,
-      'weather': entry.weather,
-      'temperature': entry.temperature,
-    };
-
-    await _firestoreDataSource.updateJournalEntry(entry.id, updates);
-    return entry;
-  }
-
-  @override
-  Future<void> deleteEntry(String id) async {
-    await _firestoreDataSource.deleteJournalEntry(id);
-  }
-
-  @override
-  Future<List<JournalEntry>> searchEntries({
-    required String userId,
-    required String query,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    // Use Firestore search functionality
-    final querySnapshot = await _firestoreDataSource.searchJournalEntries(
-      userId,
-      query,
-    );
-
-    return querySnapshot.docs.map((doc) {
-      return JournalEntryModel.fromJson(doc.data()).toEntity();
+      return JournalEntry(
+        id: model.id ?? '',
+        userId: model.userId,
+        title: model.title,
+        description: model.content,
+        photos: model.photos,
+        videos: const [], // JournalModel doesn't store videos
+        tags: model.tags,
+        mood: null, // Mood conversion would require more data
+        place: place,
+        createdAt: model.createdAt,
+        updatedAt: model.updatedAt,
+        privacyLevel: privacyLevel,
+        companionIds: const [], // JournalModel doesn't store companionIds
+      );
     }).toList();
   }
 
-  @override
-  Future<List<JournalEntry>> getEntriesByMood({
-    required String userId,
-    required MoodType mood,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final entries = await getEntries(
-      userId: userId,
-      startDate: startDate,
-      endDate: endDate,
-    );
-
-    return entries.where((entry) => entry.mood?.type == mood).toList();
-  }
-
-  @override
-  Future<List<JournalEntry>> getEntriesByPlace({
-    required String userId,
-    required String placeId,
-  }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final entries = await getEntries(userId: userId);
-    return entries.where((entry) => entry.place.id == placeId).toList();
-  }
-
-  @override
-  Future<List<JournalEntry>> getEntriesByTags({
-    required String userId,
-    required List<String> tags,
-  }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final entries = await getEntries(userId: userId);
-    return entries.where((entry) {
-      return tags.any((tag) => entry.tags.contains(tag));
-    }).toList();
-  }
-
-  @override
-  Future<List<JournalEntry>> getRecentEntries({
-    required String userId,
-    int limit = 10,
-  }) async {
-    return getEntries(userId: userId, limit: limit);
-  }
-
-  @override
-  Future<int> getEntriesCount({
-    required String userId,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    final entries = await getEntries(
-      userId: userId,
-      startDate: startDate,
-      endDate: endDate,
-    );
-
-    return entries.length;
-  }
-}
-
-/// Location repository
-abstract class LocationRepository {
-  /// Search places by query
-  Future<List<Place>> searchPlaces(String query, {int limit = 20});
-
-  /// Get place details by ID
-  Future<Place?> getPlaceDetails(String placeId);
-
-  /// Get nearby places
-  Future<List<Place>> getNearbyPlaces({
-    required double latitude,
-    required double longitude,
-    double radiusKm = 5.0,
-    String? category,
-  });
-
-  /// Get places by category
-  Future<List<Place>> getPlacesByCategory({
-    required String category,
-    double? latitude,
-    double? longitude,
+  /// Get public journals (for sharing/discovery)
+  Future<List<JournalModel>> getPublicJournals({
     int limit = 20,
-  });
+    DocumentSnapshot? startAfter,
+    String? mood,
+  }) async {
+    return await executeOperation(() async {
+      Query<Map<String, dynamic>> query = collection(_journalsCollection)
+          .where('isPublic', isEqualTo: true)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
 
-  /// Save place to favorites
-  Future<void> saveFavoritePlace(String userId, String placeId);
+      if (mood != null) {
+        query = query.where('mood', isEqualTo: mood);
+      }
 
-  /// Remove place from favorites
-  Future<void> removeFavoritePlace(String userId, String placeId);
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
 
-  /// Get user's favorite places
-  Future<List<Place>> getFavoritePlaces(String userId);
+      final querySnapshot = await query.get();
 
-  /// Check if place is favorited
-  Future<bool> isPlaceFavorited(String userId, String placeId);
-}
+      return querySnapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .toList();
+    });
+  }
 
-/// Location repository implementation
-class LocationRepositoryImpl implements LocationRepository {
-  // Implementation with geocoding integration and realistic mock data
-  // For production, integrate with Google Places API:
-  // 1. Add google_places_api package to pubspec.yaml
-  // 2. Get API key from Google Cloud Console
-  // 3. Implement actual API calls in each method
+  /// Search journals by content
+  Future<List<JournalModel>> searchJournals(String query, {
+    bool includePrivate = false,
+    int limit = 20,
+  }) async {
+    return await executeOperation(() async {
+      Query<Map<String, dynamic>> firestoreQuery = collection(_journalsCollection)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
 
-  final List<Place> _mockPlaces = [
-    Place(
-      id: 'place_1',
-      name: 'Java House Westlands',
-      address: 'Westlands Square, Nairobi, Kenya',
-      latitude: -1.2630,
-      longitude: 36.8065,
-      category: PlaceCategory.restaurant,
-      averageRating: 4.2,
-      pricing: {'level': 2, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1559496417-e7f25cb247f3?w=400',
-      ],
-      description: 'Popular coffee shop chain in Nairobi',
-    ),
-    Place(
-      id: 'place_2',
-      name: 'Nairobi National Park',
-      address: 'Nairobi, Kenya',
-      latitude: -1.3689,
-      longitude: 36.8581,
-      category: PlaceCategory.park,
-      averageRating: 4.5,
-      pricing: {'level': 1, 'entryFee': 500, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-      ],
-      description: 'Kenya\'s first national park',
-    ),
-    Place(
-      id: 'place_3',
-      name: 'Koinange Street',
-      address: 'Central Business District, Nairobi, Kenya',
-      latitude: -1.2833,
-      longitude: 36.8167,
-      category: PlaceCategory.shop,
-      averageRating: 3.8,
-      pricing: {'level': 1, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400',
-      ],
-      description: 'Historic street market in Nairobi CBD',
-    ),
-    Place(
-      id: 'place_4',
-      name: 'Giraffe Centre',
-      address: 'Karen, Nairobi, Kenya',
-      latitude: -1.3733,
-      longitude: 36.7167,
-      category: PlaceCategory.attraction,
-      averageRating: 4.3,
-      pricing: {'level': 2, 'entryFee': 1000, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=400',
-      ],
-      description:
-          'Wildlife conservation center famous for Rothschild giraffes',
-    ),
-    Place(
-      id: 'place_5',
-      name: 'Carnivore Restaurant',
-      address: 'Langata Road, Nairobi, Kenya',
-      latitude: -1.3333,
-      longitude: 36.7833,
-      category: PlaceCategory.restaurant,
-      averageRating: 4.4,
-      pricing: {'level': 3, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
-      ],
-      description: 'Famous restaurant serving African game meat',
-    ),
-    Place(
-      id: 'place_6',
-      name: 'University of Nairobi',
-      address: 'University Way, Nairobi, Kenya',
-      latitude: -1.2798,
-      longitude: 36.8167,
-      category: PlaceCategory.cultural,
-      averageRating: 4.1,
-      pricing: {'level': 1, 'currency': 'KES'},
-      photos: [
-        'https://images.unsplash.com/photo-1565688534245-05d6b5be184a?w=400',
-      ],
-      description: 'Kenya\'s oldest university',
-    ),
-  ];
+      if (!includePrivate) {
+        firestoreQuery = firestoreQuery.where('isPublic', isEqualTo: true);
+      }
 
-  @override
-  Future<List<Place>> searchPlaces(String query, {int limit = 20}) async {
-    // Simulate API call delay
-    await Future.delayed(const Duration(milliseconds: 500));
+      final querySnapshot = await firestoreQuery.get();
 
-    if (query.isEmpty) {
-      return _mockPlaces.take(limit).toList();
+      // Client-side filtering since Firestore doesn't support full-text search
+      return querySnapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .where((journal) =>
+              journal.title.toLowerCase().contains(query.toLowerCase()) ||
+              (journal.content?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
+              journal.tags.any((tag) => tag.toLowerCase().contains(query.toLowerCase())))
+          .toList();
+    });
+  }
+
+  /// Get journals by mood
+  Future<List<JournalModel>> getJournalsByMood(String mood, {
+    int limit = 20,
+    bool publicOnly = true,
+  }) async {
+    return await executeOperation(() async {
+      Query<Map<String, dynamic>> query = collection(_journalsCollection)
+          .where('mood', isEqualTo: mood)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (publicOnly) {
+        query = query.where('isPublic', isEqualTo: true);
+      }
+
+      final querySnapshot = await query.get();
+
+      return querySnapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .toList();
+    });
+  }
+
+  /// Toggle journal privacy
+  Future<void> toggleJournalPrivacy(String journalId) async {
+    return await executeOperation(() async {
+      final journal = await getJournal(journalId);
+      if (journal == null) {
+        throw DataException(message: 'Journal not found');
+      }
+
+      await updateDocument('$_journalsCollection/$journalId', {
+        'isPublic': !journal.isPublic,
+      });
+    });
+  }
+
+  /// Add tags to journal
+  Future<void> addTagsToJournal(String journalId, List<String> tags) async {
+    return await executeOperation(() async {
+      await updateDocument('$_journalsCollection/$journalId', {
+        'tags': FieldValue.arrayUnion(tags),
+      });
+    });
+  }
+
+  /// Remove tags from journal
+  Future<void> removeTagsFromJournal(String journalId, List<String> tags) async {
+    return await executeOperation(() async {
+      await updateDocument('$_journalsCollection/$journalId', {
+        'tags': FieldValue.arrayRemove(tags),
+      });
+    });
+  }
+
+  /// Update user journal count
+  Future<void> _updateUserJournalCount(String userId) async {
+    try {
+      final journalsCount = await _countUserJournals(userId);
+      await setDocument('user_stats/$userId', {
+        'journalsCount': journalsCount,
+        'lastActivity': FieldValue.serverTimestamp(),
+      }, merge: true);
+    } catch (e) {
+      // Don't fail the main operation
+      // Log error using ConsoleLogger if needed
     }
-
-    // Search by name, address, or description
-    final results =
-        _mockPlaces.where((place) {
-          final searchTerm = query.toLowerCase();
-          return place.name.toLowerCase().contains(searchTerm) ||
-              (place.address?.toLowerCase().contains(searchTerm) ?? false) ||
-              (place.description?.toLowerCase().contains(searchTerm) ?? false);
-        }).toList();
-
-    // Sort by relevance (name matches first, then address, then description)
-    results.sort((a, b) {
-      final aNameMatch = a.name.toLowerCase().contains(query.toLowerCase());
-      final bNameMatch = b.name.toLowerCase().contains(query.toLowerCase());
-
-      if (aNameMatch && !bNameMatch) return -1;
-      if (!aNameMatch && bNameMatch) return 1;
-
-      // If both match names or both don't, sort by averageRating
-      final aRating = a.averageRating ?? 0.0;
-      final bRating = b.averageRating ?? 0.0;
-      return bRating.compareTo(aRating);
-    });
-
-    return results.take(limit).toList();
   }
 
-  @override
-  Future<Place?> getPlaceDetails(String placeId) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 300));
-    return _mockPlaces.cast<Place?>().firstWhere(
-      (place) => place?.id == placeId,
-      orElse: () => null,
-    );
-  }
-
-  @override
-  Future<List<Place>> getNearbyPlaces({
-    required double latitude,
-    required double longitude,
-    double radiusKm = 5.0,
-    String? category,
-  }) async {
-    // Simulate API call delay
-    await Future.delayed(const Duration(milliseconds: 400));
-
-    // Filter places by distance and category
-    final nearbyPlaces =
-        _mockPlaces.where((place) {
-          // Calculate distance using Haversine formula
-          final distance = _calculateDistance(
-            latitude,
-            longitude,
-            place.latitude,
-            place.longitude,
-          );
-
-          // Check if within radius
-          final withinRadius = distance <= radiusKm;
-
-          // Check category filter if provided
-          final categoryMatch =
-              category == null ||
-              place.category.name.toLowerCase() == category.toLowerCase();
-
-          return withinRadius && categoryMatch;
-        }).toList();
-
-    // Sort by distance (closest first)
-    nearbyPlaces.sort((a, b) {
-      final distanceA = _calculateDistance(
-        latitude,
-        longitude,
-        a.latitude,
-        a.longitude,
+  /// Count user's journals
+  Future<int> _countUserJournals(String userId) async {
+    try {
+      final querySnapshot = await getDocuments(
+        _journalsCollection,
+        queryBuilder: (query) => query
+            .where('userId', isEqualTo: userId)
+            .where('isDeleted', isEqualTo: false),
       );
-      final distanceB = _calculateDistance(
-        latitude,
-        longitude,
-        b.latitude,
-        b.longitude,
-      );
-      return distanceA.compareTo(distanceB);
+      return querySnapshot.docs.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Listen to user's journals
+  Stream<List<JournalModel>> listenToUserJournals({String? userId}) {
+    final targetUserId = userId ?? currentUserId;
+    if (targetUserId == null) return Stream.value([]);
+
+    return listenToCollection(
+      _journalsCollection,
+      queryBuilder: (query) => query
+          .where('userId', isEqualTo: targetUserId)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(50),
+    ).map((snapshot) {
+      return snapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .toList();
     });
-
-    return nearbyPlaces;
   }
 
-  /// Calculate distance between two points using Haversine formula
-  double _calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
-    const double earthRadius = 6371; // Earth's radius in kilometers
-
-    final double dLat = _degreesToRadians(lat2 - lat1);
-    final double dLon = _degreesToRadians(lon2 - lon1);
-
-    final double a =
-        (sin(dLat / 2) * sin(dLat / 2)) +
-        cos(_degreesToRadians(lat1)) *
-            cos(_degreesToRadians(lat2)) *
-            (sin(dLon / 2) * sin(dLon / 2));
-
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthRadius * c;
-  }
-
-  double _degreesToRadians(double degrees) {
-    return degrees * pi / 180;
-  }
-
-  @override
-  Future<List<Place>> getPlacesByCategory({
-    required String category,
-    double? latitude,
-    double? longitude,
-    int limit = 20,
-  }) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 400));
-    return _mockPlaces
-        .where((place) => place.category.toString().split('.').last == category)
-        .take(limit)
-        .toList();
-  }
-
-  @override
-  Future<void> saveFavoritePlace(String userId, String placeId) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 200));
-  }
-
-  @override
-  Future<void> removeFavoritePlace(String userId, String placeId) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 200));
-  }
-
-  @override
-  Future<List<Place>> getFavoritePlaces(String userId) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 300));
-    return []; // Would return user's favorite places
-  }
-
-  @override
-  Future<bool> isPlaceFavorited(String userId, String placeId) async {
-    // Mock implementation
-    await Future.delayed(const Duration(milliseconds: 200));
-    return false; // Would check if place is favorited
+  /// Listen to public journals feed
+  Stream<List<JournalModel>> listenToPublicJournals() {
+    return listenToCollection(
+      _journalsCollection,
+      queryBuilder: (query) => query
+          .where('isPublic', isEqualTo: true)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(50),
+    ).map((snapshot) {
+      return snapshot.docs
+          .map((doc) => JournalModel.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+              }))
+          .toList();
+    });
   }
 }
