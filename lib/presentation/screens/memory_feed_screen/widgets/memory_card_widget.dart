@@ -3,7 +3,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 import 'package:zuru_app/core/app_export.dart';
-import '../../../data/models/journal_model.dart';
+import '../../../../data/models/journal_model.dart';
 
 /// Memory card widget displaying journal entry preview
 /// Implements swipe actions and long-press context menu
@@ -217,10 +217,7 @@ class MemoryCardWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: moodColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: moodColor.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        border: Border.all(color: moodColor.withValues(alpha: 0.5), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -269,64 +266,66 @@ class MemoryCardWidget extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: 1.h),
-            Container(
-              width: 12.w,
-              height: 0.5.h,
-              decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height: 1.h),
+                Container(
+                  width: 12.w,
+                  height: 0.5.h,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.3,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                ListTile(
+                  leading: CustomIconWidget(
+                    iconName: 'edit',
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                  title: Text('Edit Memory'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onEdit();
+                  },
+                ),
+                ListTile(
+                  leading: CustomIconWidget(
+                    iconName: 'share',
+                    color: theme.colorScheme.tertiary,
+                    size: 24,
+                  ),
+                  title: Text('Share Memory'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onShare();
+                  },
+                ),
+                ListTile(
+                  leading: CustomIconWidget(
+                    iconName: 'delete',
+                    color: theme.colorScheme.error,
+                    size: 24,
+                  ),
+                  title: Text(
+                    'Delete Memory',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onDelete();
+                  },
+                ),
+                SizedBox(height: 2.h),
+              ],
             ),
-            SizedBox(height: 2.h),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'edit',
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
-              title: Text('Edit Memory'),
-              onTap: () {
-                Navigator.pop(context);
-                onEdit();
-              },
-            ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'share',
-                color: theme.colorScheme.tertiary,
-                size: 24,
-              ),
-              title: Text('Share Memory'),
-              onTap: () {
-                Navigator.pop(context);
-                onShare();
-              },
-            ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'delete',
-                color: theme.colorScheme.error,
-                size: 24,
-              ),
-              title: Text(
-                'Delete Memory',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                onDelete();
-              },
-            ),
-            SizedBox(height: 2.h),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
