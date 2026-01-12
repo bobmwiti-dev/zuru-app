@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_bottom_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
 import 'package:zuru_app/presentation/screens/mood_analytics_screen/widgets/ai_insights_widget.dart';
 import 'package:zuru_app/presentation/screens/mood_analytics_screen/widgets/location_insights_widget.dart';
 import 'package:zuru_app/presentation/screens/mood_analytics_screen/widgets/mood_calendar_widget.dart';

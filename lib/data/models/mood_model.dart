@@ -19,6 +19,7 @@ class MoodModel extends Mood {
   factory MoodModel.fromJson(Map<String, dynamic> json) =>
       _$MoodModelFromJson(json);
 
+  @override
   Map<String, dynamic> toJson() => _$MoodModelToJson(this);
 
   factory MoodModel.fromEntity(Mood mood) {

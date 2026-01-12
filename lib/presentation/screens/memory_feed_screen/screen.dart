@@ -31,7 +31,9 @@ class MemoryFeedScreen extends ConsumerWidget {
               icon: CircleAvatar(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
-                  user.name?.isNotEmpty == true ? user.name![0].toUpperCase() : 'U',
+                  user.name?.isNotEmpty == true
+                      ? user.name![0].toUpperCase()
+                      : 'U',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
@@ -43,43 +45,40 @@ class MemoryFeedScreen extends ConsumerWidget {
                   _handleLogout(context, ref);
                 }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, size: 20),
-                      SizedBox(width: 8),
-                      Text('Profile'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'settings',
-                  child: Row(
-                    children: [
-                      Icon(Icons.settings, size: 20),
-                      SizedBox(width: 8),
-                      Text('Settings'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  enabled: false,
-                  height: 1,
-                  child: Divider(),
-                ),
-                PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Sign Out', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
+              itemBuilder:
+                  (context) => [
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person, size: 20),
+                          SizedBox(width: 8),
+                          Text('Profile'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'settings',
+                      child: Row(
+                        children: [
+                          Icon(Icons.settings, size: 20),
+                          SizedBox(width: 8),
+                          Text('Settings'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(enabled: false, height: 1, child: Divider()),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, size: 20, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Sign Out', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
             ),
         ],
       ),
@@ -95,9 +94,9 @@ class MemoryFeedScreen extends ConsumerWidget {
       await ref.read(authStateProvider.notifier).signOut();
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to sign out')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to sign out')));
       }
     }
   }
@@ -107,10 +106,7 @@ class _MemoryFeedContent extends StatefulWidget {
   final AuthUser? user;
   final VoidCallback onLogout;
 
-  const _MemoryFeedContent({
-    required this.user,
-    required this.onLogout,
-  });
+  const _MemoryFeedContent({required this.user, required this.onLogout});
 
   @override
   State<_MemoryFeedContent> createState() => _MemoryFeedContentState();
@@ -189,7 +185,6 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
           ),
         );
       }
-      }
     }
   }
 
@@ -242,7 +237,6 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
           ),
         );
       }
-      }
     }
   }
 
@@ -258,16 +252,17 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
       if (_searchQuery.isEmpty) {
         _filteredEntries = List.from(_journalEntries);
       } else {
-        _filteredEntries = _journalEntries.where((entry) {
-          final title = entry.title.toLowerCase();
-          final location = entry.locationName?.toLowerCase() ?? '';
-          final mood = entry.mood?.toLowerCase() ?? '';
-          final description = entry.content?.toLowerCase() ?? '';
-          return title.contains(_searchQuery) ||
-              location.contains(_searchQuery) ||
-              mood.contains(_searchQuery) ||
-              description.contains(_searchQuery);
-        }).toList();
+        _filteredEntries =
+            _journalEntries.where((entry) {
+              final title = entry.title.toLowerCase();
+              final location = entry.locationName?.toLowerCase() ?? '';
+              final mood = entry.mood?.toLowerCase() ?? '';
+              final description = entry.content?.toLowerCase() ?? '';
+              return title.contains(_searchQuery) ||
+                  location.contains(_searchQuery) ||
+                  mood.contains(_searchQuery) ||
+                  description.contains(_searchQuery);
+            }).toList();
       }
     });
   }
@@ -298,11 +293,7 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
 
   /// Navigate to journal detail
   void _navigateToDetail(JournalModel journal) {
-    Navigator.pushNamed(
-      context,
-      '/journal-detail-screen',
-      arguments: journal,
-    );
+    Navigator.pushNamed(context, '/journal-detail-screen', arguments: journal);
   }
 
   /// Navigate to add journal
@@ -318,64 +309,66 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(theme),
       body: SafeArea(
-        child: _filteredEntries.isEmpty && !_isLoading
-            ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
-            : RefreshIndicator(
-                onRefresh: _handleRefresh,
-                color: theme.colorScheme.primary,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    // Greeting header
-                    SliverToBoxAdapter(
-                      child: GreetingHeaderWidget(
-                        userName: widget.user?.name,
-                        onSearchTap: () {
-                          setState(() => _isSearching = !_isSearching);
-                        },
-                      ),
-                    ),
-
-                    // Search bar (when active)
-                    if (_isSearching)
+        child:
+            _filteredEntries.isEmpty && !_isLoading
+                ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
+                : RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: theme.colorScheme.primary,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      // Greeting header
                       SliverToBoxAdapter(
-                        child: _buildSearchBar(theme),
-                      ),
-
-                    // Memory cards list
-                    SliverPadding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            if (index >= _filteredEntries.length) {
-                              return _isLoadingMore
-                                  ? _buildLoadingCard(theme)
-                                  : SizedBox.shrink();
-                            }
-
-                            final entry = _filteredEntries[index];
-                            return Padding(
-                              padding: EdgeInsets.only(bottom: 2.h),
-                              child: MemoryCardWidget(
-                                journal: entry,
-                                onTap: () => _navigateToDetail(entry),
-                                onEdit: () => _handleEdit(entry),
-                                onShare: () => _handleShare(entry),
-                                onDelete: () => _handleDelete(entry),
-                              ),
-                            );
+                        child: GreetingHeaderWidget(
+                          userName: widget.user?.name,
+                          onSearchTap: () {
+                            setState(() => _isSearching = !_isSearching);
                           },
-                          childCount: _filteredEntries.length +
-                              (_isLoadingMore ? 1 : 0),
                         ),
                       ),
-                    ),
-                  ],
+
+                      // Search bar (when active)
+                      if (_isSearching)
+                        SliverToBoxAdapter(child: _buildSearchBar(theme)),
+
+                      // Memory cards list
+                      SliverPadding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 2.h,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index >= _filteredEntries.length) {
+                                return _isLoadingMore
+                                    ? _buildLoadingCard(theme)
+                                    : SizedBox.shrink();
+                              }
+
+                              final entry = _filteredEntries[index];
+                              return Padding(
+                                padding: EdgeInsets.only(bottom: 2.h),
+                                child: MemoryCardWidget(
+                                  journal: entry,
+                                  onTap: () => _navigateToDetail(entry),
+                                  onEdit: () => _handleEdit(entry),
+                                  onShare: () => _handleShare(entry),
+                                  onDelete: () => _handleDelete(entry),
+                                ),
+                              );
+                            },
+                            childCount:
+                                _filteredEntries.length +
+                                (_isLoadingMore ? 1 : 0),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
       ),
       floatingActionButton: _buildFAB(theme),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -438,22 +431,25 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
             color: theme.colorScheme.onSurfaceVariant,
             size: 20,
           ),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: CustomIconWidget(
-                    iconName: 'clear',
-                    color: theme.colorScheme.onSurfaceVariant,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    _searchController.clear();
-                    _handleSearch('');
-                  },
-                )
-              : null,
+          suffixIcon:
+              _searchQuery.isNotEmpty
+                  ? IconButton(
+                    icon: CustomIconWidget(
+                      iconName: 'clear',
+                      color: theme.colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      _searchController.clear();
+                      _handleSearch('');
+                    },
+                  )
+                  : null,
           border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 4.w,
+            vertical: 1.5.h,
+          ),
         ),
         style: theme.textTheme.bodyMedium,
       ),
@@ -476,8 +472,9 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
             width: double.infinity,
             height: 25.h,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -486,8 +483,9 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
             width: 60.w,
             height: 2.h,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -496,8 +494,9 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
             width: 40.w,
             height: 1.5.h,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -548,29 +547,33 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   Future<void> _handleDelete(JournalModel journal) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Memory?'),
-        content: Text(
-            'Are you sure you want to delete "${journal.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+      builder:
+          (context) => AlertDialog(
+            title: Text('Delete Memory?'),
+            content: Text(
+              'Are you sure you want to delete "${journal.title}"? This action cannot be undone.',
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  'Delete',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true && journal.id != null) {
       try {
         await _journalRepository.deleteJournal(journal.id!);
+
+        if (!mounted) return;
 
         // Remove from local lists
         setState(() {
@@ -586,6 +589,8 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
           ),
         );
       } catch (e) {
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to delete memory: $e'),

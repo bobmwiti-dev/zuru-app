@@ -37,6 +37,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
   // Form state
   String? _selectedMood;
   List<String> _companions = [];
+  final List<String> _tags = [];
+  final TextEditingController _tagController = TextEditingController();
+  bool _isPublic = false; // Privacy setting: false = private, true = public
   String? _locationName;
   Position? _currentPosition;
   bool _isLoadingLocation = false;
@@ -60,6 +63,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
+    _tagController.dispose();
+    _descriptionController.dispose();
+    _locationController.dispose();
     _cameraController?.dispose();
     super.dispose();
   }
@@ -81,13 +87,16 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       if (_cameras.isEmpty) return;
 
       // Select appropriate camera
-      final camera = kIsWeb
-          ? _cameras.firstWhere(
-              (c) => c.lensDirection == CameraLensDirection.front,
-              orElse: () => _cameras.first)
-          : _cameras.firstWhere(
-              (c) => c.lensDirection == CameraLensDirection.back,
-              orElse: () => _cameras.first);
+      final camera =
+          kIsWeb
+              ? _cameras.firstWhere(
+                (c) => c.lensDirection == CameraLensDirection.front,
+                orElse: () => _cameras.first,
+              )
+              : _cameras.firstWhere(
+                (c) => c.lensDirection == CameraLensDirection.back,
+                orElse: () => _cameras.first,
+              );
 
       // Initialize controller
       _cameraController = CameraController(
@@ -226,18 +235,21 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       final journal = JournalModel(
         userId: userId,
         title: _titleController.text.trim(),
-        content: _descriptionController.text.trim().isNotEmpty
-            ? _descriptionController.text.trim()
-            : null,
+        content:
+            _descriptionController.text.trim().isNotEmpty
+                ? _descriptionController.text.trim()
+                : null,
         mood: _selectedMood,
         latitude: _currentPosition?.latitude,
         longitude: _currentPosition?.longitude,
-        locationName: _locationName ?? (_locationController.text.trim().isNotEmpty
-            ? _locationController.text.trim()
-            : null),
+        locationName:
+            _locationName ??
+            (_locationController.text.trim().isNotEmpty
+                ? _locationController.text.trim()
+                : null),
         photos: photoUrls,
-        tags: [], // TODO: Implement tags
-        isPublic: false, // TODO: Add privacy toggle
+        tags: _tags,
+        isPublic: _isPublic,
         createdAt: DateTime.now(),
       );
 
@@ -262,24 +274,26 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
   void _showPermissionDialog(String permission) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('$permission Permission Required'),
-        content:
-            Text('Please grant $permission permission to use this feature.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: Text('$permission Permission Required'),
+            content: Text(
+              'Please grant $permission permission to use this feature.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -287,17 +301,19 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
   void _showLocationServiceDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Services Disabled'),
-        content: const Text(
-            'Please enable location services to automatically fetch your location.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Location Services Disabled'),
+            content: const Text(
+              'Please enable location services to automatically fetch your location.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -333,26 +349,29 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _saveJournalEntry,
-            child: _isSaving
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
+            child:
+                _isSaving
+                    ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.primary,
+                        ),
+                      ),
+                    )
+                    : Text(
+                      'Save',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color:
+                            _isFormValid()
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant.withValues(
+                                  alpha: 0.5,
+                                ),
                       ),
                     ),
-                  )
-                : Text(
-                    'Save',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: _isFormValid()
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.5),
-                    ),
-                  ),
           ),
           SizedBox(width: 2.w),
         ],
@@ -396,8 +415,8 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                 // Mood Selector
                 MoodSelectorWidget(
                   selectedMood: _selectedMood,
-                  onMoodSelected: (mood) =>
-                      setState(() => _selectedMood = mood),
+                  onMoodSelected:
+                      (mood) => setState(() => _selectedMood = mood),
                 ),
 
                 SizedBox(height: 3.h),
@@ -405,9 +424,19 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                 // Companion Tagging
                 CompanionTagWidget(
                   companions: _companions,
-                  onCompanionsChanged: (companions) =>
-                      setState(() => _companions = companions),
+                  onCompanionsChanged:
+                      (companions) => setState(() => _companions = companions),
                 ),
+
+                SizedBox(height: 3.h),
+
+                // Tags Section
+                _buildTagsSection(theme),
+
+                SizedBox(height: 3.h),
+
+                // Privacy Toggle
+                _buildPrivacySection(theme),
 
                 SizedBox(height: 4.h),
               ],
@@ -444,28 +473,29 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
           controller: _locationController,
           decoration: InputDecoration(
             hintText: 'Add location manually',
-            suffixIcon: _isLoadingLocation
-                ? Padding(
-                    padding: EdgeInsets.all(3.w),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.primary,
+            suffixIcon:
+                _isLoadingLocation
+                    ? Padding(
+                      padding: EdgeInsets.all(3.w),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            theme.colorScheme.primary,
+                          ),
                         ),
                       ),
+                    )
+                    : IconButton(
+                      icon: CustomIconWidget(
+                        iconName: 'my_location',
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      onPressed: _fetchCurrentLocation,
                     ),
-                  )
-                : IconButton(
-                    icon: CustomIconWidget(
-                      iconName: 'my_location',
-                      color: theme.colorScheme.primary,
-                      size: 20,
-                    ),
-                    onPressed: _fetchCurrentLocation,
-                  ),
           ),
           style: theme.textTheme.bodyMedium,
         ),
@@ -517,9 +547,10 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
             Text(
               '$currentLength/$_maxDescriptionLength',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: currentLength > _maxDescriptionLength
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.onSurfaceVariant,
+                color:
+                    currentLength > _maxDescriptionLength
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -535,9 +566,165 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
           maxLength: _maxDescriptionLength,
           textCapitalization: TextCapitalization.sentences,
           onChanged: (_) => setState(() {}),
-          buildCounter: (context,
-                  {required currentLength, required isFocused, maxLength}) =>
-              null,
+          buildCounter:
+              (
+                context, {
+                required currentLength,
+                required isFocused,
+                maxLength,
+              }) => null,
+        ),
+      ],
+    );
+  }
+
+  /// Build tags section
+  Widget _buildTagsSection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CustomIconWidget(
+              iconName: 'label',
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
+            SizedBox(width: 2.w),
+            Text(
+              'Tags',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 1.h),
+        TextField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            hintText: 'Add tags (press Enter to add)',
+            suffixIcon:
+                _tagController.text.isNotEmpty
+                    ? IconButton(
+                      icon: CustomIconWidget(
+                        iconName: 'add',
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      onPressed: _addTag,
+                    )
+                    : null,
+          ),
+          style: theme.textTheme.bodyMedium,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _addTag(),
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_tags.isNotEmpty) ...[
+          SizedBox(height: 1.5.h),
+          Wrap(
+            spacing: 1.w,
+            runSpacing: 1.h,
+            children:
+                _tags.map((tag) {
+                  return Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() {
+                        _tags.remove(tag);
+                      });
+                    },
+                    deleteIcon: Icon(
+                      Icons.close,
+                      size: 18,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    labelStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  );
+                }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Add a tag from the input field
+  void _addTag() {
+    final tag = _tagController.text.trim();
+    if (tag.isNotEmpty && !_tags.contains(tag)) {
+      setState(() {
+        _tags.add(tag);
+        _tagController.clear();
+      });
+    }
+  }
+
+  /// Build privacy section
+  Widget _buildPrivacySection(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CustomIconWidget(
+              iconName: 'privacy_tip',
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
+            SizedBox(width: 2.w),
+            Text(
+              'Privacy',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 1.h),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.3,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: SwitchListTile(
+            value: _isPublic,
+            onChanged: (value) {
+              setState(() {
+                _isPublic = value;
+              });
+            },
+            title: Text(
+              _isPublic ? 'Public' : 'Private',
+              style: theme.textTheme.bodyLarge,
+            ),
+            subtitle: Text(
+              _isPublic
+                  ? 'Anyone can see this memory'
+                  : 'Only you can see this memory',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            secondary: CustomIconWidget(
+              iconName: _isPublic ? 'public' : 'lock',
+              color:
+                  _isPublic
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+              size: 24,
+            ),
+            activeColor: theme.colorScheme.primary,
+          ),
         ),
       ],
     );

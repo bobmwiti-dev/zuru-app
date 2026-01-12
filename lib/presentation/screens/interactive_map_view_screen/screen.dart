@@ -5,9 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/custom_bottom_bar.dart';
-import '../../../widgets/custom_icon_widget.dart';
 import './widgets/map_controls_widget.dart';
 import './widgets/memory_list_bottom_sheet_widget.dart';
 import './widgets/memory_preview_card_widget.dart';

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/custom_icon_widget.dart';
 import './widgets/content_section.dart';
 import './widgets/hero_media_section.dart';
 import './widgets/location_map_section.dart';

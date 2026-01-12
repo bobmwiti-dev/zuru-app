@@ -29,6 +29,7 @@ class PlaceModel extends Place {
   factory PlaceModel.fromJson(Map<String, dynamic> json) =>
       _$PlaceModelFromJson(json);
 
+  @override
   Map<String, dynamic> toJson() => _$PlaceModelToJson(this);
 
   factory PlaceModel.fromEntity(Place place) {

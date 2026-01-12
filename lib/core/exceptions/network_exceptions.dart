@@ -66,7 +66,7 @@ class NetworkExceptions {
     }
   }
 
-  static ServerException _handleHttpException(HttpException error) {
+  static AppException _handleHttpException(HttpException error) {
     final message = error.message;
     final messageLower = message.toLowerCase();
 
