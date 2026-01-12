@@ -1,189 +1,210 @@
-import 'package:zuru_app/domain/entities/user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
-class UserModel extends User {
+/// User profile model for Firestore operations
+class UserModel extends Equatable {
+  final String id;
+  final String email;
+  final String? displayName;
+  final String? photoUrl;
+  final String? bio;
+  final DateTime? dateOfBirth;
+  final String? location;
+  final List<String> interests;
+  final bool isEmailVerified;
+  final bool isDeleted;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final DateTime? lastLoginAt;
+  final DateTime? deletedAt;
+
   const UserModel({
-    required super.id,
-    required super.email,
-    required super.privacySettings,
-    required super.preferences,
-    required super.createdAt,
-    super.displayName,
-    super.bio,
-    super.avatarUrl,
-    super.friendIds,
-    super.lastLoginAt,
-    super.isEmailVerified,
+    required this.id,
+    required this.email,
+    this.displayName,
+    this.photoUrl,
+    this.bio,
+    this.dateOfBirth,
+    this.location,
+    this.interests = const [],
+    this.isEmailVerified = false,
+    this.isDeleted = false,
+    required this.createdAt,
+    this.updatedAt,
+    this.lastLoginAt,
+    this.deletedAt,
   });
 
+  /// Create from Firestore document
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
       email: json['email'] as String,
       displayName: json['displayName'] as String?,
+      photoUrl: json['photoUrl'] as String?,
       bio: json['bio'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
-      friendIds: (json['friendIds'] as List<dynamic>?)?.cast<String>() ?? [],
-      privacySettings:
-          json['privacySettings'] != null
-              ? PrivacySettingsModel.fromJson(
-                json['privacySettings'] as Map<String, dynamic>,
-              )
-              : const PrivacySettingsModel(),
-      preferences:
-          json['preferences'] != null
-              ? UserPreferencesModel.fromJson(
-                json['preferences'] as Map<String, dynamic>,
-              )
-              : const UserPreferencesModel(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      lastLoginAt:
-          json['lastLoginAt'] != null
-              ? DateTime.parse(json['lastLoginAt'] as String)
-              : null,
+      dateOfBirth: (json['dateOfBirth'] as Timestamp?)?.toDate(),
+      location: json['location'] as String?,
+      interests: (json['interests'] as List<dynamic>?)?.cast<String>() ?? [],
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (json['updatedAt'] as Timestamp?)?.toDate(),
+      lastLoginAt: (json['lastLoginAt'] as Timestamp?)?.toDate(),
+      deletedAt: (json['deletedAt'] as Timestamp?)?.toDate(),
     );
   }
 
+  /// Convert to Firestore document format
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'email': email,
-      'displayName': displayName,
-      'bio': bio,
-      'avatarUrl': avatarUrl,
-      'friendIds': friendIds,
-      'privacySettings':
-          PrivacySettingsModel.fromEntity(privacySettings).toJson(),
-      'preferences': UserPreferencesModel.fromEntity(preferences).toJson(),
-      'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      if (displayName != null) 'displayName': displayName,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+      if (bio != null) 'bio': bio,
+      if (dateOfBirth != null) 'dateOfBirth': Timestamp.fromDate(dateOfBirth!),
+      if (location != null) 'location': location,
+      'interests': interests,
       'isEmailVerified': isEmailVerified,
+      'isDeleted': isDeleted,
+      'createdAt': Timestamp.fromDate(createdAt),
+      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+      if (lastLoginAt != null) 'lastLoginAt': Timestamp.fromDate(lastLoginAt!),
+      if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
     };
   }
 
-  factory UserModel.fromEntity(User user) {
+  /// Create from Firebase Auth user
+  factory UserModel.fromFirebaseUser(dynamic firebaseUser) {
     return UserModel(
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      friendIds: user.friendIds,
-      privacySettings: PrivacySettingsModel.fromEntity(user.privacySettings),
-      preferences: UserPreferencesModel.fromEntity(user.preferences),
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      isEmailVerified: user.isEmailVerified,
+      id: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      displayName: firebaseUser.displayName,
+      photoUrl: firebaseUser.photoURL,
+      isEmailVerified: firebaseUser.emailVerified ?? false,
+      createdAt: firebaseUser.metadata?.creationTime ?? DateTime.now(),
+      lastLoginAt: firebaseUser.metadata?.lastSignInTime ?? DateTime.now(),
     );
   }
 
-  User toEntity() {
-    return User(
-      id: id,
-      email: email,
-      displayName: displayName,
-      bio: bio,
-      avatarUrl: avatarUrl,
-      friendIds: friendIds,
-      privacySettings: privacySettings,
-      preferences: preferences,
-      createdAt: createdAt,
-      lastLoginAt: lastLoginAt,
-      isEmailVerified: isEmailVerified,
+  /// Create copy with updated fields
+  UserModel copyWith({
+    String? id,
+    String? email,
+    String? displayName,
+    String? photoUrl,
+    String? bio,
+    DateTime? dateOfBirth,
+    String? location,
+    List<String>? interests,
+    bool? isEmailVerified,
+    bool? isDeleted,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastLoginAt,
+    DateTime? deletedAt,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      bio: bio ?? this.bio,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      location: location ?? this.location,
+      interests: interests ?? this.interests,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+      isDeleted: isDeleted ?? this.isDeleted,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
+  }
+
+  /// Get display name or fallback to email
+  String get displayNameOrEmail => displayName ?? email.split('@').first;
+
+  /// Check if user has complete profile
+  bool get hasCompleteProfile =>
+      displayName != null && displayName!.isNotEmpty && bio != null && bio!.isNotEmpty;
+
+  @override
+  List<Object?> get props => [
+        id,
+        email,
+        displayName,
+        photoUrl,
+        bio,
+        dateOfBirth,
+        location,
+        interests,
+        isEmailVerified,
+        isDeleted,
+        createdAt,
+        updatedAt,
+        lastLoginAt,
+        deletedAt,
+      ];
+
+  @override
+  String toString() {
+    return 'UserModel(id: $id, email: $email, displayName: $displayName)';
   }
 }
 
-class PrivacySettingsModel extends PrivacySettings {
-  const PrivacySettingsModel({
-    super.profileIsPublic,
-    super.showLocationHistory,
-    super.allowFriendRequests,
-    super.showMoodHistory,
-    super.blockedUserIds,
+/// User statistics model
+class UserStats extends Equatable {
+  final int journalsCount;
+  final int friendsCount;
+  final int followersCount;
+  final int followingCount;
+  final DateTime? lastActivity;
+
+  const UserStats({
+    required this.journalsCount,
+    required this.friendsCount,
+    required this.followersCount,
+    required this.followingCount,
+    this.lastActivity,
   });
 
-  factory PrivacySettingsModel.fromJson(Map<String, dynamic> json) {
-    return PrivacySettingsModel(
-      profileIsPublic: json['profileIsPublic'] as bool? ?? false,
-      showLocationHistory: json['showLocationHistory'] as bool? ?? false,
-      allowFriendRequests: json['allowFriendRequests'] as bool? ?? true,
-      showMoodHistory: json['showMoodHistory'] as bool? ?? false,
-      blockedUserIds:
-          (json['blockedUserIds'] as List<dynamic>?)?.cast<String>() ?? [],
+  factory UserStats.fromJson(Map<String, dynamic> json) {
+    return UserStats(
+      journalsCount: json['journalsCount'] as int? ?? 0,
+      friendsCount: json['friendsCount'] as int? ?? 0,
+      followersCount: json['followersCount'] as int? ?? 0,
+      followingCount: json['followingCount'] as int? ?? 0,
+      lastActivity: (json['lastActivity'] as Timestamp?)?.toDate(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'profileIsPublic': profileIsPublic,
-      'showLocationHistory': showLocationHistory,
-      'allowFriendRequests': allowFriendRequests,
-      'showMoodHistory': showMoodHistory,
-      'blockedUserIds': blockedUserIds,
+      'journalsCount': journalsCount,
+      'friendsCount': friendsCount,
+      'followersCount': followersCount,
+      'followingCount': followingCount,
+      if (lastActivity != null) 'lastActivity': Timestamp.fromDate(lastActivity!),
     };
   }
 
-  factory PrivacySettingsModel.fromEntity(PrivacySettings settings) {
-    return PrivacySettingsModel(
-      profileIsPublic: settings.profileIsPublic,
-      showLocationHistory: settings.showLocationHistory,
-      allowFriendRequests: settings.allowFriendRequests,
-      showMoodHistory: settings.showMoodHistory,
-      blockedUserIds: settings.blockedUserIds,
-    );
-  }
-}
-
-class UserPreferencesModel extends UserPreferences {
-  const UserPreferencesModel({
-    super.enableNotifications,
-    super.autoSaveDrafts,
-    super.defaultPrivacyLevel,
-    super.enableWeatherIntegration,
-    super.enableLocationTracking,
-    super.theme,
-    super.language,
-    super.customSettings,
-  });
-
-  factory UserPreferencesModel.fromJson(Map<String, dynamic> json) {
-    return UserPreferencesModel(
-      enableNotifications: json['enableNotifications'] as bool? ?? true,
-      autoSaveDrafts: json['autoSaveDrafts'] as bool? ?? true,
-      defaultPrivacyLevel: json['defaultPrivacyLevel'] as String? ?? 'private',
-      enableWeatherIntegration:
-          json['enableWeatherIntegration'] as bool? ?? true,
-      enableLocationTracking: json['enableLocationTracking'] as bool? ?? true,
-      theme: json['theme'] as String? ?? 'system',
-      language: json['language'] as String? ?? 'en',
-      customSettings: (json['customSettings'] as Map<String, dynamic>?) ?? {},
+  factory UserStats.empty() {
+    return const UserStats(
+      journalsCount: 0,
+      friendsCount: 0,
+      followersCount: 0,
+      followingCount: 0,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'enableNotifications': enableNotifications,
-      'autoSaveDrafts': autoSaveDrafts,
-      'defaultPrivacyLevel': defaultPrivacyLevel,
-      'enableWeatherIntegration': enableWeatherIntegration,
-      'enableLocationTracking': enableLocationTracking,
-      'theme': theme,
-      'language': language,
-      'customSettings': customSettings,
-    };
-  }
-
-  factory UserPreferencesModel.fromEntity(UserPreferences preferences) {
-    return UserPreferencesModel(
-      enableNotifications: preferences.enableNotifications,
-      autoSaveDrafts: preferences.autoSaveDrafts,
-      defaultPrivacyLevel: preferences.defaultPrivacyLevel,
-      enableWeatherIntegration: preferences.enableWeatherIntegration,
-      enableLocationTracking: preferences.enableLocationTracking,
-      theme: preferences.theme,
-      language: preferences.language,
-      customSettings: preferences.customSettings,
-    );
-  }
+  @override
+  List<Object?> get props => [
+        journalsCount,
+        friendsCount,
+        followersCount,
+        followingCount,
+        lastActivity,
+      ];
 }
