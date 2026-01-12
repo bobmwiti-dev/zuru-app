@@ -3,11 +3,12 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 import 'package:zuru_app/core/app_export.dart';
+import '../../../data/models/journal_model.dart';
 
 /// Memory card widget displaying journal entry preview
 /// Implements swipe actions and long-press context menu
 class MemoryCardWidget extends StatelessWidget {
-  final Map<String, dynamic> entry;
+  final JournalModel journal;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onShare;
@@ -15,7 +16,7 @@ class MemoryCardWidget extends StatelessWidget {
 
   const MemoryCardWidget({
     super.key,
-    required this.entry,
+    required this.journal,
     required this.onTap,
     required this.onEdit,
     required this.onShare,
@@ -27,7 +28,7 @@ class MemoryCardWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Slidable(
-      key: ValueKey(entry["id"]),
+      key: ValueKey(journal.id),
       endActionPane: ActionPane(
         motion: ScrollMotion(),
         children: [
@@ -88,7 +89,7 @@ class MemoryCardWidget extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            entry["title"] as String,
+                            journal.title,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -105,7 +106,7 @@ class MemoryCardWidget extends StatelessWidget {
 
                     // Description
                     Text(
-                      entry["description"] as String,
+                      journal.content ?? 'No description',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -126,7 +127,7 @@ class MemoryCardWidget extends StatelessWidget {
                         SizedBox(width: 1.w),
                         Expanded(
                           child: Text(
-                            entry["location"] as String,
+                            journal.locationName ?? 'Unknown location',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -148,38 +149,15 @@ class MemoryCardWidget extends StatelessWidget {
                         ),
                         SizedBox(width: 1.w),
                         Text(
-                          _formatTimestamp(entry["timestamp"] as DateTime),
+                          _formatTimestamp(journal.createdAt),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
 
-                        // Companions indicator
-                        if ((entry["companions"] as List).isNotEmpty) ...[
-                          SizedBox(width: 3.w),
-                          CustomIconWidget(
-                            iconName: 'people',
-                            color: theme.colorScheme.onSurfaceVariant,
-                            size: 16,
-                          ),
-                          SizedBox(width: 1.w),
-                          Text(
-                            '${(entry["companions"] as List).length}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                        // Companions indicator (removed for now - can be added back with JournalModel updates)
 
-                        // Offline indicator
-                        if (entry["isOffline"] == true) ...[
-                          Spacer(),
-                          CustomIconWidget(
-                            iconName: 'cloud_off',
-                            color: theme.colorScheme.onSurfaceVariant,
-                            size: 16,
-                          ),
-                        ],
+                        // Offline indicator removed for now
                       ],
                     ),
                   ],
@@ -199,11 +177,11 @@ class MemoryCardWidget extends StatelessWidget {
       child: Stack(
         children: [
           CustomImageWidget(
-            imageUrl: entry["imageUrl"] as String,
+            imageUrl: journal.photos.isNotEmpty ? journal.photos.first : null,
             width: double.infinity,
             height: 25.h,
             fit: BoxFit.cover,
-            semanticLabel: entry["semanticLabel"] as String,
+            semanticLabel: 'Journal entry image',
           ),
 
           // Gradient overlay for better text visibility
@@ -232,7 +210,7 @@ class MemoryCardWidget extends StatelessWidget {
 
   /// Build mood badge
   Widget _buildMoodBadge(ThemeData theme) {
-    final moodColor = Color(entry["moodColor"] as int);
+    final moodColor = _getMoodColor(journal.mood);
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
@@ -248,13 +226,13 @@ class MemoryCardWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           CustomIconWidget(
-            iconName: entry["moodIcon"] as String,
+            iconName: _getMoodIcon(journal.mood),
             color: moodColor,
             size: 14,
           ),
           SizedBox(width: 1.w),
           Text(
-            entry["mood"] as String,
+            journal.mood ?? 'Unknown',
             style: theme.textTheme.labelSmall?.copyWith(
               color: moodColor,
               fontWeight: FontWeight.w500,
@@ -350,5 +328,53 @@ class MemoryCardWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Get mood color based on mood string
+  Color _getMoodColor(String? mood) {
+    switch (mood?.toLowerCase()) {
+      case 'happy':
+        return const Color(0xFFF4E4BC);
+      case 'calm':
+        return const Color(0xFF2D7D7D);
+      case 'excited':
+        return const Color(0xFFE8B4B8);
+      case 'sad':
+        return const Color(0xFF7986CB);
+      case 'angry':
+        return const Color(0xFFE57373);
+      case 'anxious':
+        return const Color(0xFFFFB74D);
+      case 'grateful':
+        return const Color(0xFF81C784);
+      case 'focused':
+        return const Color(0xFF2196F3);
+      default:
+        return const Color(0xFF9E9E9E);
+    }
+  }
+
+  /// Get mood icon based on mood string
+  String _getMoodIcon(String? mood) {
+    switch (mood?.toLowerCase()) {
+      case 'happy':
+        return 'sentiment_satisfied';
+      case 'calm':
+        return 'self_improvement';
+      case 'excited':
+        return 'celebration';
+      case 'sad':
+        return 'sentiment_dissatisfied';
+      case 'angry':
+        return 'sentiment_very_dissatisfied';
+      case 'anxious':
+        return 'warning';
+      case 'grateful':
+        return 'favorite';
+      case 'focused':
+        return 'visibility';
+      default:
+        return 'sentiment_neutral';
+    }
   }
 }

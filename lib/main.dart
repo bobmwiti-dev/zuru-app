@@ -5,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:zuru_app/app/theme/app_theme.dart';
 import 'package:zuru_app/app/config/environment.dart';
-import 'package:zuru_app/presentation/screens/authentication_screen/screen.dart';
-import 'package:zuru_app/presentation/screens/memory_feed_screen/screen.dart';
+import 'package:zuru_app/routes/app_routes.dart';
 import 'package:zuru_app/providers/auth_provider.dart';
 import 'package:zuru_app/data/repositories/auth_repository.dart';
 
@@ -44,23 +43,14 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-
     return Sizer(
       builder: (context, orientation, deviceType) {
         return MaterialApp(
           title: 'Zuru',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          home: switch (authState) {
-            AuthAuthenticated() => const MemoryFeedScreen(),
-            AuthError() || AuthLoading() || AuthInitial() => const AuthenticationScreen(
-              key: ValueKey('auth_screen'),
-            ),
-            _ => const AuthenticationScreen(
-              key: ValueKey('auth_screen'),
-            ),
-          },
+          initialRoute: AppRoutes.initial,
+          onGenerateRoute: AppRoutes.generateRoute,
         );
       },
     );

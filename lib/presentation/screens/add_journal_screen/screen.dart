@@ -7,11 +7,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_app_bar.dart';
-import '../../../widgets/custom_icon_widget.dart';
 import './widgets/camera_preview_widget.dart';
 import './widgets/companion_tag_widget.dart';
 import './widgets/mood_selector_widget.dart';
+import '../../../data/models/journal_model.dart';
+import '../../../data/repositories/journal_repository.dart';
 
 /// Add Journal Screen - Enables users to capture and document experiences
 /// with location-aware journaling optimized for mobile input
@@ -44,6 +44,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
   // Character counter
   final int _maxDescriptionLength = 500;
+
+  // Repository
+  final JournalRepository _journalRepository = JournalRepository();
 
   @override
   void initState() {
@@ -205,16 +208,49 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Simulate save operation (in production, save to Firebase)
-      await Future.delayed(const Duration(seconds: 2));
+      // Get current user ID
+      final userId = _journalRepository.currentUserId;
+      if (userId == null) {
+        _showErrorSnackBar('User not authenticated');
+        return;
+      }
+
+      // Prepare photos URLs (for now, we'll use empty array since we don't have file upload implemented yet)
+      List<String> photoUrls = [];
+      if (_capturedImage != null) {
+        // TODO: Upload image to Firebase Storage and get URL
+        // For now, we'll skip image upload and just save the journal without photos
+      }
+
+      // Create journal model
+      final journal = JournalModel(
+        userId: userId,
+        title: _titleController.text.trim(),
+        content: _descriptionController.text.trim().isNotEmpty
+            ? _descriptionController.text.trim()
+            : null,
+        mood: _selectedMood,
+        latitude: _currentPosition?.latitude,
+        longitude: _currentPosition?.longitude,
+        locationName: _locationName ?? (_locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : null),
+        photos: photoUrls,
+        tags: [], // TODO: Implement tags
+        isPublic: false, // TODO: Add privacy toggle
+        createdAt: DateTime.now(),
+      );
+
+      // Save to Firestore
+      await _journalRepository.createJournal(journal);
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/memory-feed-screen');
-        _showSuccessSnackBar('Journal entry saved successfully');
+        _showSuccessSnackBar('Journal entry saved successfully!');
       }
     } catch (e) {
       debugPrint('Save error: $e');
-      _showErrorSnackBar('Failed to save journal entry');
+      _showErrorSnackBar('Failed to save journal entry: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

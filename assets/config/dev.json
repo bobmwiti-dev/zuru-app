@@ -2,12 +2,12 @@
   "environment": "dev",
   "apiBaseUrl": "https://api.zuru.dev",
   "firebase": {
-    "apiKey": "dev-api-key-here",
+    "apiKey": "AIzaSyDUMMY_API_KEY_FOR_DEVELOPMENT_ONLY",
     "authDomain": "zuru-dev.firebaseapp.com",
     "projectId": "zuru-dev",
     "storageBucket": "zuru-dev.appspot.com",
     "messagingSenderId": "123456789012",
-    "appId": "1:123456789012:web:abcdef1234567890"
+    "appId": "1:123456789012:web:abcdef1234567890abcdef"
   },
   "features": {
     "analytics": false,

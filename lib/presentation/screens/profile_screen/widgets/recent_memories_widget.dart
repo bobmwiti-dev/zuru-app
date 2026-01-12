@@ -1,45 +1,183 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
+import '../../../../app/di/injector.dart';
+import '../../../../data/models/journal_model.dart';
 
 /// Recent Memories Widget - Shows user's latest journal entries
-class RecentMemoriesWidget extends StatelessWidget {
+class RecentMemoriesWidget extends ConsumerWidget {
   const RecentMemoriesWidget({super.key});
 
-  // Mock recent memories data
-  static const _recentMemories = [
-    {
-      'id': '1',
-      'title': 'Coffee at Java House',
-      'location': 'Westlands',
-      'timestamp': '2h ago',
-      'mood': 'Happy',
-      'moodColor': Color(0xFFFFC107),
-      'imageUrl': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400',
-    },
-    {
-      'id': '2',
-      'title': 'Sunset at Karura Forest',
-      'location': 'Karura Forest',
-      'timestamp': '1d ago',
-      'mood': 'Calm',
-      'moodColor': Color(0xFF4A9B8E),
-      'imageUrl': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400',
-    },
-    {
-      'id': '3',
-      'title': 'Art Exhibition Visit',
-      'location': 'National Museum',
-      'timestamp': '3d ago',
-      'mood': 'Inspired',
-      'moodColor': Color(0xFF9C27B0),
-      'imageUrl': 'https://images.unsplash.com/photo-1577083552431-6e5fd01988ec?w=400',
-    },
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final journalRepository = ref.watch(journalRepositoryProvider);
+    final currentUserId = journalRepository.currentUserId;
+
+    if (currentUserId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<List<JournalModel>>(
+      future: journalRepository.getUserJournals(
+        userId: currentUserId,
+        limit: 3, // Show only 3 recent memories
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingWidget(context);
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorWidget(context);
+        }
+
+        final journals = snapshot.data ?? [];
+        if (journals.isEmpty) {
+          return _buildEmptyWidget(context);
+        }
+
+        return _buildMemoriesWidget(context, journals);
+      },
+    );
+  }
+
+  Widget _buildLoadingWidget(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Memories',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Memories',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: Text(
+              'Unable to load recent memories',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyWidget(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Memories',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              TextButton(
+                onPressed: () => _viewAllMemories(context),
+                child: Text(
+                  'View All',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: Text(
+              'No memories yet. Start journaling!',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemoriesWidget(
+    BuildContext context,
+    List<JournalModel> journals,
+  ) {
     final theme = Theme.of(context);
 
     return Container(
@@ -88,11 +226,11 @@ class RecentMemoriesWidget extends StatelessWidget {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _recentMemories.length,
+            itemCount: journals.length,
             separatorBuilder: (context, index) => SizedBox(height: 2.h),
             itemBuilder: (context, index) {
-              final memory = _recentMemories[index];
-              return _buildMemoryItem(context, memory);
+              final journal = journals[index];
+              return _buildMemoryItem(context, journal);
             },
           ),
         ],
@@ -100,16 +238,18 @@ class RecentMemoriesWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildMemoryItem(BuildContext context, Map<String, dynamic> memory) {
+  Widget _buildMemoryItem(BuildContext context, JournalModel journal) {
     final theme = Theme.of(context);
 
     return InkWell(
-      onTap: () => _openMemoryDetail(context, memory['id'] as String),
+      onTap: () => _openMemoryDetail(context, journal.id!),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.all(3.w),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.3,
+          ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: theme.colorScheme.outline.withValues(alpha: 0.2),
@@ -122,11 +262,12 @@ class RecentMemoriesWidget extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: CustomImageWidget(
-                imageUrl: memory['imageUrl'] as String,
+                imageUrl:
+                    journal.photos.isNotEmpty ? journal.photos.first : null,
                 width: 15.w,
                 height: 15.w,
                 fit: BoxFit.cover,
-                semanticLabel: memory['title'] as String,
+                semanticLabel: journal.title,
               ),
             ),
 
@@ -139,7 +280,7 @@ class RecentMemoriesWidget extends StatelessWidget {
                 children: [
                   // Title
                   Text(
-                    memory['title'] as String,
+                    journal.title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
@@ -161,7 +302,7 @@ class RecentMemoriesWidget extends StatelessWidget {
                       SizedBox(width: 1.w),
                       Expanded(
                         child: Text(
-                          memory['location'] as String,
+                          journal.locationName ?? 'Unknown location',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -184,7 +325,7 @@ class RecentMemoriesWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 1.w),
                       Text(
-                        memory['timestamp'] as String,
+                        _formatTimestamp(journal.createdAt),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -199,13 +340,15 @@ class RecentMemoriesWidget extends StatelessWidget {
                           vertical: 0.5.h,
                         ),
                         decoration: BoxDecoration(
-                          color: (memory['moodColor'] as Color).withValues(alpha: 0.2),
+                          color: _getMoodColor(
+                            journal.mood,
+                          ).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          memory['mood'] as String,
+                          journal.mood ?? 'Unknown',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: memory['moodColor'] as Color,
+                            color: _getMoodColor(journal.mood),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -240,5 +383,45 @@ class RecentMemoriesWidget extends StatelessWidget {
       '/journal-detail-screen',
       arguments: {'memoryId': memoryId},
     );
+  }
+
+  /// Format timestamp to relative time
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  /// Get mood color based on mood string
+  Color _getMoodColor(String? mood) {
+    switch (mood?.toLowerCase()) {
+      case 'happy':
+        return const Color(0xFFFFC107);
+      case 'calm':
+        return const Color(0xFF4A9B8E);
+      case 'excited':
+        return const Color(0xFFE8B4B8);
+      case 'sad':
+        return const Color(0xFF7986CB);
+      case 'angry':
+        return const Color(0xFFE57373);
+      case 'anxious':
+        return const Color(0xFFFFB74D);
+      case 'grateful':
+        return const Color(0xFF81C784);
+      case 'focused':
+        return const Color(0xFF2196F3);
+      default:
+        return const Color(0xFF9E9E9E);
+    }
   }
 }

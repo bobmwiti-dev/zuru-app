@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import 'package:zuru_app/core/app_export.dart';
-import 'package:zuru_app/widgets/custom_app_bar.dart';
-import 'package:zuru_app/widgets/custom_bottom_bar.dart';
 import './widgets/empty_state_widget.dart';
 import './widgets/greeting_header_widget.dart';
 import './widgets/memory_card_widget.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../domain/models/auth_user.dart';
+import '../../../data/models/journal_model.dart';
+import '../../../data/repositories/journal_repository.dart';
 
 /// Memory Feed Screen - Primary home screen displaying journal entries
 /// Implements chronological feed with pull-to-refresh and infinite scroll
@@ -126,14 +126,15 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   bool _isSearching = false;
   String _searchQuery = '';
 
-  // Mock data for journal entries
-  List<Map<String, dynamic>> _journalEntries = [];
-  List<Map<String, dynamic>> _filteredEntries = [];
+  // Real journal data from Firestore
+  List<JournalModel> _journalEntries = [];
+  List<JournalModel> _filteredEntries = [];
+  final JournalRepository _journalRepository = JournalRepository();
 
   @override
   void initState() {
     super.initState();
-    _loadMockData();
+    _loadJournals();
     _scrollController.addListener(_onScroll);
   }
 
@@ -144,156 +145,52 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     super.dispose();
   }
 
-  /// Load mock journal entries
-  void _loadMockData() {
-    _journalEntries = [
-      {
-        "id": "1",
-        "title": "Coffee at Java House",
-        "description":
-            "Amazing cappuccino and great ambiance. Perfect spot for morning journaling.",
-        "mood": "Happy",
-        "moodIcon": "sentiment_satisfied",
-        "moodColor": 0xFFF4E4BC,
-        "location": "Java House, Westlands",
-        "coordinates": {"lat": -1.2674, "lng": 36.8108},
-        "timestamp": DateTime.now().subtract(Duration(hours: 2)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
-        "semanticLabel":
-            "Steaming cup of cappuccino with latte art on wooden table in cozy cafe setting",
-        "companions": ["Sarah", "Mike"],
-        "isOffline": false,
-      },
-      {
-        "id": "2",
-        "title": "Sunset at Karura Forest",
-        "description":
-            "Peaceful evening walk through the forest trails. Nature therapy at its finest.",
-        "mood": "Calm",
-        "moodIcon": "self_improvement",
-        "moodColor": 0xFF2D7D7D,
-        "location": "Karura Forest, Nairobi",
-        "coordinates": {"lat": -1.2421, "lng": 36.8358},
-        "timestamp": DateTime.now().subtract(Duration(days: 1)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800",
-        "semanticLabel":
-            "Golden sunset filtering through tall trees in lush green forest with walking path",
-        "companions": [],
-        "isOffline": false,
-      },
-      {
-        "id": "3",
-        "title": "Rooftop Dinner at Tribe Hotel",
-        "description":
-            "Celebrated promotion with the team. Incredible city views and delicious food!",
-        "mood": "Excited",
-        "moodIcon": "celebration",
-        "moodColor": 0xFFE8B4B8,
-        "location": "Tribe Hotel, Gigiri",
-        "coordinates": {"lat": -1.2357, "lng": 36.8076},
-        "timestamp": DateTime.now().subtract(Duration(days: 2)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
-        "semanticLabel":
-            "Elegant rooftop restaurant with city skyline view at dusk, tables with ambient lighting",
-        "companions": ["Team"],
-        "isOffline": false,
-      },
-      {
-        "id": "4",
-        "title": "Morning Yoga at Uhuru Park",
-        "description":
-            "Started the day with outdoor yoga session. Feeling refreshed and centered.",
-        "mood": "Calm",
-        "moodIcon": "self_improvement",
-        "moodColor": 0xFF2D7D7D,
-        "location": "Uhuru Park, CBD",
-        "coordinates": {"lat": -1.2833, "lng": 36.8167},
-        "timestamp": DateTime.now().subtract(Duration(days: 3)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800",
-        "semanticLabel":
-            "Person in yoga pose on mat in green park with morning sunlight",
-        "companions": [],
-        "isOffline": false,
-      },
-      {
-        "id": "5",
-        "title": "Art Gallery Visit",
-        "description":
-            "Explored contemporary African art at Circle Art Gallery. So much inspiration!",
-        "mood": "Inspired",
-        "moodIcon": "lightbulb",
-        "moodColor": 0xFFD4A574,
-        "location": "Circle Art Gallery, Parklands",
-        "coordinates": {"lat": -1.2667, "lng": 36.8167},
-        "timestamp": DateTime.now().subtract(Duration(days: 4)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=800",
-        "semanticLabel":
-            "Modern art gallery interior with colorful abstract paintings on white walls",
-        "companions": ["Alex"],
-        "isOffline": false,
-      },
-      {
-        "id": "6",
-        "title": "Weekend Market at Village Market",
-        "description":
-            "Found amazing handcrafted items and enjoyed live music. Love supporting local artisans.",
-        "mood": "Happy",
-        "moodIcon": "sentiment_satisfied",
-        "moodColor": 0xFFF4E4BC,
-        "location": "Village Market, Gigiri",
-        "coordinates": {"lat": -1.2357, "lng": 36.8076},
-        "timestamp": DateTime.now().subtract(Duration(days: 5)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800",
-        "semanticLabel":
-            "Colorful outdoor market stalls with handcrafted items and people browsing",
-        "companions": ["Emma"],
-        "isOffline": false,
-      },
-      {
-        "id": "7",
-        "title": "Late Night Coding Session",
-        "description":
-            "Finally cracked that bug! Sometimes the best solutions come at midnight.",
-        "mood": "Accomplished",
-        "moodIcon": "emoji_events",
-        "moodColor": 0xFF4A9B8E,
-        "location": "Home Office, Kilimani",
-        "coordinates": {"lat": -1.2921, "lng": 36.7833},
-        "timestamp": DateTime.now().subtract(Duration(days: 6)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800",
-        "semanticLabel":
-            "Laptop with code on screen in dimly lit room with coffee cup nearby",
-        "companions": [],
-        "isOffline": false,
-      },
-      {
-        "id": "8",
-        "title": "Brunch at Artcaffe",
-        "description":
-            "Lazy Sunday brunch with friends. Good food, better conversations.",
-        "mood": "Content",
-        "moodIcon": "favorite",
-        "moodColor": 0xFFE8B4B8,
-        "location": "Artcaffe, The Junction",
-        "coordinates": {"lat": -1.2921, "lng": 36.7833},
-        "timestamp": DateTime.now().subtract(Duration(days: 7)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
-        "semanticLabel":
-            "Colorful brunch spread with pancakes, fruits, and coffee on rustic wooden table",
-        "companions": ["Lisa", "Tom", "Kate"],
-        "isOffline": false,
-      },
-    ];
+  /// Load real journal entries from Firestore
+  Future<void> _loadJournals() async {
+    if (!mounted) return;
 
-    _filteredEntries = List.from(_journalEntries);
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get current user ID
+      final userId = _journalRepository.currentUserId;
+      if (userId == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Load user's journals from Firestore
+      final journals = await _journalRepository.getUserJournals(
+        userId: userId,
+        limit: 50,
+      );
+
+      if (mounted) {
+        setState(() {
+          _journalEntries = journals;
+          _filteredEntries = List.from(journals);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        // Show error snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load journals: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      }
+    }
   }
 
   /// Handle scroll for infinite loading
@@ -306,59 +203,52 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     }
   }
 
-  /// Simulate loading more entries
+  /// Load more journal entries from Firestore
   Future<void> _loadMoreEntries() async {
     if (_isLoadingMore) return;
 
     setState(() => _isLoadingMore = true);
 
-    await Future.delayed(Duration(seconds: 1));
-
-    // Add more mock entries
-    final newEntries = List.generate(3, (index) {
-      final baseIndex = _journalEntries.length + index;
-      return {
-        "id": "new_$baseIndex",
-        "title": "Memory ${baseIndex + 1}",
-        "description": "Another wonderful moment captured in time.",
-        "mood": ["Happy", "Calm", "Excited"][index % 3],
-        "moodIcon": [
-          "sentiment_satisfied",
-          "self_improvement",
-          "celebration"
-        ][index % 3],
-        "moodColor": [0xFFF4E4BC, 0xFF2D7D7D, 0xFFE8B4B8][index % 3],
-        "location": "Nairobi, Kenya",
-        "coordinates": {"lat": -1.2921, "lng": 36.8219},
-        "timestamp": DateTime.now().subtract(Duration(days: 8 + index)),
-        "imageUrl":
-            "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
-        "semanticLabel":
-            "Scenic landscape view with mountains and clear blue sky",
-        "companions": [],
-        "isOffline": false,
-      };
-    });
-
-    setState(() {
-      _journalEntries.addAll(newEntries);
-      if (_searchQuery.isEmpty) {
-        _filteredEntries.addAll(newEntries);
+    try {
+      // Get current user ID
+      final userId = _journalRepository.currentUserId;
+      if (userId == null) {
+        setState(() => _isLoadingMore = false);
+        return;
       }
-      _isLoadingMore = false;
-    });
+
+      // Load more journals from Firestore
+      // Note: For pagination, we'd need to track the last document snapshot
+      // For now, we'll just reload with a higher limit
+      final moreJournals = await _journalRepository.getUserJournals(
+        userId: userId,
+        limit: _journalEntries.length + 10,
+      );
+
+      if (mounted) {
+        setState(() {
+          _journalEntries.addAll(moreJournals);
+          _filteredEntries = List.from(_journalEntries);
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load more journals: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      }
+    }
   }
 
   /// Handle pull to refresh
   Future<void> _handleRefresh() async {
-    setState(() => _isLoading = true);
-
-    await Future.delayed(Duration(seconds: 1));
-
-    setState(() {
-      _loadMockData();
-      _isLoading = false;
-    });
+    await _loadJournals();
   }
 
   /// Handle search
@@ -369,12 +259,14 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
         _filteredEntries = List.from(_journalEntries);
       } else {
         _filteredEntries = _journalEntries.where((entry) {
-          final title = (entry["title"] as String).toLowerCase();
-          final location = (entry["location"] as String).toLowerCase();
-          final mood = (entry["mood"] as String).toLowerCase();
+          final title = entry.title.toLowerCase();
+          final location = entry.locationName?.toLowerCase() ?? '';
+          final mood = entry.mood?.toLowerCase() ?? '';
+          final description = entry.content?.toLowerCase() ?? '';
           return title.contains(_searchQuery) ||
               location.contains(_searchQuery) ||
-              mood.contains(_searchQuery);
+              mood.contains(_searchQuery) ||
+              description.contains(_searchQuery);
         }).toList();
       }
     });
@@ -405,11 +297,11 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   }
 
   /// Navigate to journal detail
-  void _navigateToDetail(Map<String, dynamic> entry) {
+  void _navigateToDetail(JournalModel journal) {
     Navigator.pushNamed(
       context,
       '/journal-detail-screen',
-      arguments: entry,
+      arguments: journal,
     );
   }
 
@@ -468,7 +360,7 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
                             return Padding(
                               padding: EdgeInsets.only(bottom: 2.h),
                               child: MemoryCardWidget(
-                                entry: entry,
+                                journal: entry,
                                 onTap: () => _navigateToDetail(entry),
                                 onEdit: () => _handleEdit(entry),
                                 onShare: () => _handleShare(entry),
@@ -635,51 +527,38 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   }
 
   /// Handle edit action
-  void _handleEdit(Map<String, dynamic> entry) {
+  void _handleEdit(JournalModel journal) {
     Navigator.pushNamed(
       context,
       '/add-journal-screen',
-      arguments: {'mode': 'edit', 'entry': entry},
+      arguments: {'mode': 'edit', 'journal': journal},
     );
   }
 
   /// Handle share action
-  void _handleShare(Map<String, dynamic> entry) {
+  void _handleShare(JournalModel journal) {
     Navigator.pushNamed(
       context,
       '/share-screen',
-      arguments: {'memory': entry},
+      arguments: {'memory': journal},
     );
   }
 
   /// Handle delete action
-  void _handleDelete(Map<String, dynamic> entry) {
-    showDialog(
+  Future<void> _handleDelete(JournalModel journal) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete Memory?'),
         content: Text(
-            'Are you sure you want to delete "${entry["title"]}"? This action cannot be undone.'),
+            'Are you sure you want to delete "${journal.title}"? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _journalEntries.removeWhere((e) => e["id"] == entry["id"]);
-                _filteredEntries.removeWhere((e) => e["id"] == entry["id"]);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Memory deleted'),
-                  duration: Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Delete',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -688,5 +567,33 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
         ],
       ),
     );
+
+    if (confirmed == true && journal.id != null) {
+      try {
+        await _journalRepository.deleteJournal(journal.id!);
+
+        // Remove from local lists
+        setState(() {
+          _journalEntries.removeWhere((j) => j.id == journal.id);
+          _filteredEntries.removeWhere((j) => j.id == journal.id);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Memory deleted'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete memory: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

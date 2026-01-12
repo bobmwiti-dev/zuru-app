@@ -1,43 +1,190 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
+import '../../../../app/di/injector.dart';
 
 /// Stats Overview Widget - Displays user statistics and achievements
-class StatsOverviewWidget extends StatelessWidget {
+class StatsOverviewWidget extends ConsumerWidget {
   const StatsOverviewWidget({super.key});
 
-  // Mock stats data - in production, this would come from a repository
-  static const _stats = [
-    {
-      'label': 'Total Memories',
-      'value': '42',
-      'icon': 'auto_stories',
-      'color': Color(0xFF6366F1), // Primary
-    },
-    {
-      'label': 'Places Visited',
-      'value': '18',
-      'icon': 'location_on',
-      'color': Color(0xFF10B981), // Accent
-    },
-    {
-      'label': 'Current Streak',
-      'value': '7',
-      'icon': 'local_fire_department',
-      'color': Color(0xFFF59E0B), // Warning
-    },
-    {
-      'label': 'Favorite Mood',
-      'value': 'Calm',
-      'icon': 'sentiment_satisfied',
-      'color': Color(0xFF4A9B8E), // Custom green
-    },
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userRepository = ref.watch(userRepositoryProvider);
+    final currentUserId = userRepository.currentUserId;
+
+    if (currentUserId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder(
+      future: userRepository.getUserStats(currentUserId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingStats(context);
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorStats(context);
+        }
+
+        final stats = snapshot.data;
+        if (stats == null) {
+          return _buildEmptyStats(context);
+        }
+
+        return _buildStatsContent(context, stats);
+      },
+    );
+  }
+
+  Widget _buildLoadingStats(BuildContext context) {
     final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Stats',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorStats(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Stats',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: Text(
+              'Unable to load stats',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyStats(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Stats',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Center(
+            child: Text(
+              'No stats available yet',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsContent(BuildContext context, dynamic stats) {
+    final theme = Theme.of(context);
+
+    // Create stats list from real data
+    final statsList = [
+      {
+        'label': 'Total Memories',
+        'value': stats.journalsCount?.toString() ?? '0',
+        'icon': 'auto_stories',
+        'color': const Color(0xFF6366F1),
+      },
+      {
+        'label': 'Friends',
+        'value': stats.friendsCount?.toString() ?? '0',
+        'icon': 'people',
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'label': 'Followers',
+        'value': stats.followersCount?.toString() ?? '0',
+        'icon': 'person_add',
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'label': 'Following',
+        'value': stats.followingCount?.toString() ?? '0',
+        'icon': 'person',
+        'color': const Color(0xFF4A9B8E),
+      },
+    ];
 
     return Container(
       padding: EdgeInsets.all(4.w),
@@ -55,9 +202,9 @@ class StatsOverviewWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Title
           Text(
-            'Your Journey',
+            'Your Stats',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -76,9 +223,9 @@ class StatsOverviewWidget extends StatelessWidget {
               mainAxisSpacing: 3.w,
               childAspectRatio: 1.5,
             ),
-            itemCount: _stats.length,
+            itemCount: statsList.length,
             itemBuilder: (context, index) {
-              final stat = _stats[index];
+              final stat = statsList[index];
               return _buildStatCard(context, stat);
             },
           ),

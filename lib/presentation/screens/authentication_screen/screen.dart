@@ -24,7 +24,7 @@ class AuthenticationScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // Auth mode toggle
   bool _isSignUpMode = true;
 
@@ -80,19 +80,6 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
 
     // Initialize error message from widget parameter
     _errorMessage = widget.error;
-
-    // Listen to auth state changes to update error messages
-    ref.listen<AuthState>(authStateProvider, (previous, next) {
-      if (next is AuthError && mounted) {
-        setState(() {
-          _errorMessage = next.message;
-        });
-      } else if (next is AuthLoading && mounted) {
-        setState(() {
-          _errorMessage = null; // Clear errors when loading starts
-        });
-      }
-    });
   }
 
   @override
@@ -256,8 +243,7 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
             ),
           );
 
-          // Navigate to main screen after successful sign-in
-          Navigator.pushReplacementNamed(context, '/');
+          // Navigation will be handled by the widget's build method when auth state changes
         }
       }
 
@@ -303,8 +289,7 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
         );
         AnimationUtils.selectionClick();
 
-        // Navigate to main screen after successful sign-in
-        Navigator.pushReplacementNamed(context, '/');
+        // Navigation will be handled by the widget's build method when auth state changes
       }
     } catch (e) {
       setState(() {
@@ -368,6 +353,42 @@ class _AuthenticationScreenState extends ConsumerState<AuthenticationScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = ref.watch(authStateProvider);
+
+    // Handle authenticated state - navigate to main screen
+    if (authState is AuthAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/');
+        }
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Update error message based on auth state
+    if (authState is AuthError) {
+      _errorMessage = authState.message;
+    } else if (authState is AuthLoading) {
+      _errorMessage = null; // Clear errors when loading starts
+    }
+
+    // Handle loading state
+    if (authState is AuthLoading || authState is AuthInitial) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+              ),
+              SizedBox(height: 2.h),
+              Text('Loading...', style: theme.textTheme.bodyLarge),
+            ],
+          ),
+        ),
+      );
+    }
 
     // Update loading state based on auth state
     ref.listen<AuthState>(authStateProvider, (previous, next) {
