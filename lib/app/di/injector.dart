@@ -11,6 +11,7 @@ import '../../core/analytics/app_analytics.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../providers/auth_provider.dart';
 import '../../data/repositories/journal_repository.dart';
+import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/analytics_repository.dart';
 import '../../data/datasources/local/shared_preferences_datasource.dart';
 import '../../data/datasources/remote/auth/firebase_auth_datasource.dart';
@@ -84,12 +85,11 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final journalRepositoryProvider = Provider<JournalRepository>((ref) {
-  final firestoreDataSource = ref.watch(firestoreDataSourceProvider);
-  return JournalRepositoryImpl(firestoreDataSource);
+  return JournalRepository();
 });
 
-final locationRepositoryProvider = Provider<LocationRepository>((ref) {
-  return LocationRepositoryImpl();
+final userRepositoryProvider = Provider<UserRepository>((ref) {
+  return UserRepository();
 });
 
 /// Firebase Analytics provider
