@@ -4,6 +4,9 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../domain/models/auth_user.dart';
 import '../../core/exceptions/firebase_exceptions.dart';
 import '../../core/exceptions/app_exception.dart';
+import '../../app/config/environment.dart';
+import '../models/user_model.dart';
+import 'user_repository.dart';
 
 /// Abstract auth repository
 abstract class AuthRepository {
@@ -40,6 +43,26 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser> signIn(String email, String password) async {
+    // Check if we're in development with placeholder Firebase config
+    final firebaseConfig = Environment.config.firebaseConfig;
+    if (Environment.isDevelopment &&
+        (firebaseConfig.apiKey.contains('dev-api-key') ||
+            firebaseConfig.projectId == 'zuru-dev')) {
+      // Simulate successful signin for development
+      await Future.delayed(
+        const Duration(seconds: 1),
+      ); // Simulate network delay
+
+      return AuthUser(
+        id: 'dev-user-${DateTime.now().millisecondsSinceEpoch}',
+        email: email,
+        name: 'Dev User',
+        avatarUrl: null,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        lastLoginAt: DateTime.now(),
+      );
+    }
+
     try {
       final result = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -61,6 +84,40 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser> signUp(String email, String password, String name) async {
+    // Check if we're in development with placeholder Firebase config
+    final firebaseConfig = Environment.config.firebaseConfig;
+    if (Environment.isDevelopment &&
+        (firebaseConfig.apiKey.contains('dev-api-key') ||
+            firebaseConfig.projectId == 'zuru-dev')) {
+      // Simulate successful signup for development
+      await Future.delayed(
+        const Duration(seconds: 1),
+      ); // Simulate network delay
+
+      final userId = 'dev-user-${DateTime.now().millisecondsSinceEpoch}';
+
+      // Create user profile in Firestore
+      final userProfile = UserModel(
+        id: userId,
+        email: email,
+        displayName: name,
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+      );
+
+      final userRepository = UserRepository();
+      await userRepository.createOrUpdateUserProfile(userProfile);
+
+      return AuthUser(
+        id: userId,
+        email: email,
+        name: name,
+        avatarUrl: null,
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+      );
+    }
+
     try {
       final result = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
@@ -72,16 +129,55 @@ class AuthRepositoryImpl implements AuthRepository {
         await result.user!.updateDisplayName(name);
       }
 
+      final userId = result.user!.uid;
+
+      // Create user profile in Firestore
+      final userProfile = UserModel(
+        id: userId,
+        email: result.user!.email!,
+        displayName: name.isNotEmpty ? name : result.user!.displayName,
+        photoUrl: result.user!.photoURL,
+        isEmailVerified: result.user!.emailVerified,
+        createdAt: result.user!.metadata.creationTime ?? DateTime.now(),
+        lastLoginAt: result.user!.metadata.lastSignInTime ?? DateTime.now(),
+      );
+
+      final userRepository = UserRepository();
+      await userRepository.createOrUpdateUserProfile(userProfile);
+
       return AuthUser(
-        id: result.user!.uid,
+        id: userId,
         email: result.user!.email!,
         name: name.isNotEmpty ? name : result.user!.displayName,
         avatarUrl: result.user!.photoURL,
         createdAt: result.user!.metadata.creationTime!,
         lastLoginAt: result.user!.metadata.lastSignInTime,
       );
-    } on FirebaseAuthException catch (e) {
-      throw FirebaseExceptions.handleFirebaseException(e);
+    } catch (e) {
+      // Check if it's a Firebase configuration issue
+      if (e.toString().contains('apiKey') ||
+          e.toString().contains('projectId') ||
+          e.toString().contains('invalid') ||
+          e.toString().contains('configuration')) {
+        throw AuthenticationException(
+          message:
+              'Firebase is not properly configured. Please check your Firebase project settings.',
+          code: 'firebase_config_error',
+          originalException: e,
+        );
+      }
+
+      // Re-throw as Firebase exception for proper handling
+      if (e is FirebaseAuthException) {
+        throw FirebaseExceptions.handleFirebaseException(e);
+      }
+
+      // Handle other exceptions
+      throw AuthenticationException(
+        message: 'Sign up failed: ${e.toString()}',
+        code: 'signup_failed',
+        originalException: e,
+      );
     }
   }
 
