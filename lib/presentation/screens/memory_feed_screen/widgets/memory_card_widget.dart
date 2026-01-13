@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sizer/sizer.dart';
 import 'package:zuru_app/core/app_export.dart';
@@ -47,6 +49,9 @@ class MemoryCardWidget extends StatefulWidget {
   late final Animation<double> _heartScale;
   Timer? _heartHideTimer;
 
+  late final AnimationController _pressController;
+  late final Animation<double> _pressScale;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +67,19 @@ class MemoryCardWidget extends StatefulWidget {
       CurvedAnimation(
         parent: _heartController,
         curve: Curves.easeOutBack,
+      ),
+    );
+
+    _pressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      reverseDuration: const Duration(milliseconds: 140),
+    );
+    _pressScale = Tween<double>(begin: 1.0, end: 0.985).animate(
+      CurvedAnimation(
+        parent: _pressController,
+        curve: Curves.easeOut,
+        reverseCurve: Curves.easeOut,
       ),
     );
   }
@@ -89,6 +107,7 @@ class MemoryCardWidget extends StatefulWidget {
   void dispose() {
     _heartHideTimer?.cancel();
     _heartController.dispose();
+    _pressController.dispose();
     super.dispose();
   }
 
@@ -111,6 +130,12 @@ class MemoryCardWidget extends StatefulWidget {
         _showHeart = true;
       }
     });
+
+    if (next) {
+      HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
 
     widget.onLikeChanged?.call(next);
 
@@ -155,43 +180,155 @@ class MemoryCardWidget extends StatefulWidget {
 
     final captionText = widget.journal.content;
 
-    return Material(
-      color: colorScheme.surface,
-      child: InkWell(
-        onTap: widget.onTap,
-        onLongPress: () => _showContextMenu(context),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: colorScheme.outline,
-                width: 0.5,
-              ),
-            ),
+    final neonCyan = const Color(0xFF00E5FF);
+    final neonPurple = const Color(0xFFB000FF);
+    final borderColor = Color.lerp(neonCyan, neonPurple, 0.55)!.withValues(
+      alpha: 0.55,
+    );
+
+    return Slidable(
+      key: ValueKey(widget.journal.id ?? widget.journal.createdAt),
+      startActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.48,
+        children: [
+          SlidableAction(
+            onPressed: (_) {
+              HapticFeedback.selectionClick();
+              widget.onEdit();
+            },
+            backgroundColor: neonPurple.withValues(alpha: 0.22),
+            foregroundColor: neonPurple,
+            icon: Icons.edit,
+            label: 'Edit',
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              _buildMedia(theme),
-              _buildActionsRow(context),
-              if (_likesCount > 0)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: Text(
-                    '$_likesCount likes',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
+          SlidableAction(
+            onPressed: (_) {
+              HapticFeedback.selectionClick();
+              widget.onShare();
+            },
+            backgroundColor: neonCyan.withValues(alpha: 0.18),
+            foregroundColor: neonCyan,
+            icon: Icons.send_outlined,
+            label: 'Share',
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.48,
+        children: [
+          SlidableAction(
+            onPressed: (_) {
+              final next = !_isSaved;
+              HapticFeedback.selectionClick();
+              setState(() => _isSaved = next);
+              widget.onSaveChanged?.call(next);
+            },
+            backgroundColor: borderColor.withValues(alpha: 0.20),
+            foregroundColor: colorScheme.onSurface,
+            icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+            label: _isSaved ? 'Saved' : 'Save',
+            borderRadius: BorderRadius.circular(16),
+          ),
+          SlidableAction(
+            onPressed: (_) {
+              HapticFeedback.mediumImpact();
+              widget.onDelete();
+            },
+            backgroundColor: colorScheme.error.withValues(alpha: 0.18),
+            foregroundColor: colorScheme.error,
+            icon: Icons.delete_outline,
+            label: 'Delete',
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ],
+      ),
+      child: AnimatedBuilder(
+        animation: _pressController,
+        builder: (context, child) {
+          final t = Curves.easeOut.transform(_pressController.value);
+          final glow = 0.18 + (0.10 * t);
+
+          return Transform.scale(
+            scale: _pressScale.value,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: neonCyan.withValues(alpha: glow),
+                    blurRadius: 18,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: neonPurple.withValues(alpha: glow * 0.75),
+                    blurRadius: 22,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: widget.onTap,
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showContextMenu(context);
+                  },
+                  onTapDown: (_) {
+                    HapticFeedback.selectionClick();
+                    _pressController.forward();
+                  },
+                  onTapCancel: () {
+                    _pressController.reverse();
+                  },
+                  onTapUp: (_) {
+                    _pressController.reverse();
+                  },
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: borderColor,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(context),
+                        _buildMedia(theme),
+                        _buildActionsRow(context),
+                        if (_likesCount > 0)
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4.w),
+                            child: Text(
+                              '$_likesCount likes',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        _buildCaption(theme, captionText),
+                        _buildMeta(theme),
+                        SizedBox(height: 1.h),
+                      ],
                     ),
                   ),
                 ),
-              _buildCaption(theme, captionText),
-              _buildMeta(theme),
-              SizedBox(height: 1.h),
-            ],
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -272,7 +409,10 @@ class MemoryCardWidget extends StatefulWidget {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _openMediaViewer,
-              onDoubleTap: () => _toggleLike(showHeartOverlay: true),
+              onDoubleTap: () {
+                HapticFeedback.lightImpact();
+                _toggleLike(showHeartOverlay: true);
+              },
               child: Hero(
                 tag: _heroTag,
                 child: CustomImageWidget(
@@ -319,7 +459,10 @@ class MemoryCardWidget extends StatefulWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => _toggleLike(showHeartOverlay: false),
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              _toggleLike(showHeartOverlay: false);
+            },
             icon: Icon(
               _isLiked ? Icons.favorite : Icons.favorite_border,
               color: _isLiked ? AppColors.secondary : colorScheme.onSurface,
@@ -335,7 +478,10 @@ class MemoryCardWidget extends StatefulWidget {
             tooltip: 'Comment',
           ),
           IconButton(
-            onPressed: widget.onShare,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              widget.onShare();
+            },
             icon: Icon(
               Icons.send_outlined,
               color: colorScheme.onSurface,
@@ -346,6 +492,7 @@ class MemoryCardWidget extends StatefulWidget {
           IconButton(
             onPressed: () {
               final next = !_isSaved;
+              HapticFeedback.selectionClick();
               setState(() => _isSaved = next);
               widget.onSaveChanged?.call(next);
             },
