@@ -155,7 +155,8 @@ class CustomBottomBar extends StatelessWidget {
 
     // Determine colors based on selection state
     final color = isSelected
-        ? colorScheme.primary
+        ? theme.bottomNavigationBarTheme.selectedItemColor ??
+            colorScheme.onSurface
         : theme.bottomNavigationBarTheme.unselectedItemColor ??
             colorScheme.onSurfaceVariant;
 
@@ -374,7 +375,8 @@ class CustomBottomBarSimple extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     final color = isSelected
-        ? colorScheme.primary
+        ? theme.bottomNavigationBarTheme.selectedItemColor ??
+            colorScheme.onSurface
         : theme.bottomNavigationBarTheme.unselectedItemColor ??
             colorScheme.onSurfaceVariant;
 
