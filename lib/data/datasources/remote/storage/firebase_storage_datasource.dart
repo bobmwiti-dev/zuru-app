@@ -46,7 +46,7 @@ class FirebaseStorageDataSource {
     );
 
     final uploadTask = storageRef.putData(
-      data as Uint8List,
+      Uint8List.fromList(data),
       metadata,
     );
     final snapshot = await uploadTask.whenComplete(() {});
