@@ -2,31 +2,31 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary Colors
-  static const Color primary = Color(0xFF6366F1); // Indigo
-  static const Color primaryLight = Color(0xFF818CF8);
-  static const Color primaryDark = Color(0xFF4F46E5);
+  static const Color primary = Color(0xFF0095F6); // Instagram-like blue
+  static const Color primaryLight = Color(0xFF4DB5FF);
+  static const Color primaryDark = Color(0xFF0077CC);
 
   // Secondary Colors
-  static const Color secondary = Color(0xFFEC4899); // Pink
-  static const Color secondaryLight = Color(0xFFF472B6);
-  static const Color secondaryDark = Color(0xFFDB2777);
+  static const Color secondary = Color(0xFFE1306C); // Accent pink
+  static const Color secondaryLight = Color(0xFFFF5C8D);
+  static const Color secondaryDark = Color(0xFFC13584);
 
   // Accent Colors
-  static const Color accent = Color(0xFF10B981); // Emerald
-  static const Color accentLight = Color(0xFF34D399);
-  static const Color accentDark = Color(0xFF059669);
+  static const Color accent = Color(0xFF00C2A8); // Fresh teal accent
+  static const Color accentLight = Color(0xFF42E5D1);
+  static const Color accentDark = Color(0xFF009E8A);
 
   // Neutral Colors
-  static const Color background = Color(0xFFFAFAFA);
+  static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF5F5F5);
-  static const Color onSurface = Color(0xFF1F2937);
-  static const Color onSurfaceVariant = Color(0xFF6B7280);
+  static const Color surfaceVariant = Color(0xFFFAFAFA);
+  static const Color onSurface = Color(0xFF262626);
+  static const Color onSurfaceVariant = Color(0xFF8E8E8E);
 
   // Text Colors
-  static const Color textPrimary = Color(0xFF111827);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textHint = Color(0xFF9CA3AF);
+  static const Color textPrimary = Color(0xFF262626);
+  static const Color textSecondary = Color(0xFF8E8E8E);
+  static const Color textHint = Color(0xFFC7C7C7);
 
   // Status Colors
   static const Color success = Color(0xFF10B981);
@@ -47,23 +47,23 @@ class AppColors {
   static const Color moodGrateful = Color(0xFFDDA0DD); // Plum
 
   // Privacy Level Colors
-  static const Color privacyPrivate = Color(0xFF6B7280); // Gray
+  static const Color privacyPrivate = Color(0xFF8E8E8E); // Gray
   static const Color privacyFriends = Color(0xFFF59E0B); // Amber
-  static const Color privacyPublic = Color(0xFF10B981); // Green
+  static const Color privacyPublic = Color(0xFF0095F6); // Blue
 
   // Weather Colors
   static const Color weatherSunny = Color(0xFFFFD700);
-  static const Color weatherCloudy = Color(0xFF9CA3AF);
+  static const Color weatherCloudy = Color(0xFFC7C7C7);
   static const Color weatherRainy = Color(0xFF3B82F6);
   static const Color weatherSnowy = Color(0xFFE5E7EB);
-  static const Color weatherWindy = Color(0xFF6B7280);
+  static const Color weatherWindy = Color(0xFF8E8E8E);
   static const Color weatherFoggy = Color(0xFFD1D5DB);
 
   // Category Colors
   static const Color categoryRestaurant = Color(0xFFEF4444); // Red
   static const Color categoryCafe = Color(0xFF8B5CF6); // Violet
   static const Color categoryBar = Color(0xFFF59E0B); // Amber
-  static const Color categoryHotel = Color(0xFF10B981); // Emerald
+  static const Color categoryHotel = Color(0xFF0095F6); // Blue
   static const Color categoryAttraction = Color(0xFFF97316); // Orange
   static const Color categoryPark = Color(0xFF22C55E); // Green
   static const Color categoryMuseum = Color(0xFF6366F1); // Indigo
@@ -77,11 +77,11 @@ class AppColors {
   static const Color transparent = Colors.transparent;
   static const Color white = Colors.white;
   static const Color black = Colors.black;
-  static const Color divider = Color(0xFFE5E7EB);
+  static const Color divider = Color(0xFFDBDBDB);
 
   // Shadow Colors
-  static const Color shadow = Color(0x1F000000); // 12% black
-  static const Color shadowLight = Color(0x0F000000); // 6% black
+  static const Color shadow = Color(0x14000000); // 8% black
+  static const Color shadowLight = Color(0x0A000000); // 4% black
 
   // Helper method to get mood color by type
   static Color getMoodColor(String moodType) {
