@@ -11,6 +11,7 @@ import './widgets/camera_preview_widget.dart';
 import './widgets/companion_tag_widget.dart';
 import './widgets/mood_selector_widget.dart';
 import '../../../data/models/journal_model.dart';
+import '../../../data/datasources/remote/storage/firebase_storage_datasource.dart';
 import '../../../data/repositories/journal_repository.dart';
 
 /// Add Journal Screen - Enables users to capture and document experiences
@@ -50,6 +51,8 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
   // Repository
   final JournalRepository _journalRepository = JournalRepository();
+  final FirebaseStorageDataSource _firebaseStorageDataSource =
+      FirebaseStorageDataSource();
 
   @override
   void initState() {
@@ -227,8 +230,32 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       // Prepare photos URLs (for now, we'll use empty array since we don't have file upload implemented yet)
       List<String> photoUrls = [];
       if (_capturedImage != null) {
-        // TODO: Upload image to Firebase Storage and get URL
-        // For now, we'll skip image upload and just save the journal without photos
+        try {
+          final bytes = await _capturedImage!.readAsBytes();
+          final originalFileName = _capturedImage!.name;
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_$originalFileName';
+
+          String? contentType;
+          final extension = originalFileName.toLowerCase();
+          if (extension.endsWith('.png')) {
+            contentType = 'image/png';
+          } else if (extension.endsWith('.jpg') || extension.endsWith('.jpeg')) {
+            contentType = 'image/jpeg';
+          }
+
+          final downloadUrl = await _firebaseStorageDataSource.uploadData(
+            path: 'journal_photos',
+            data: bytes,
+            userId: userId,
+            fileName: fileName,
+            contentType: contentType,
+          );
+
+          photoUrls = [downloadUrl];
+        } catch (e) {
+          debugPrint('Image upload error: $e');
+        }
       }
 
       // Create journal model
