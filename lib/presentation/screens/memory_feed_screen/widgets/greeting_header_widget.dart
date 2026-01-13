@@ -24,13 +24,12 @@ class GreetingHeaderWidget extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: Offset(0, 2),
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outline,
+            width: 0.5,
           ),
-        ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
