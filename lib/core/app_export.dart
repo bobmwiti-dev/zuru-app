@@ -24,7 +24,7 @@ export '../widgets/shimmer_widget.dart';
 export '../widgets/shimmer_widget.dart' show ShimmerContainer, ShimmerText, ShimmerListItem;
 
 // Theme
-export '../theme/app_theme.dart';
+export '../app/theme/app_theme.dart';
 
 // External packages
 export 'package:connectivity_plus/connectivity_plus.dart';
