@@ -117,8 +117,15 @@ class AppTheme {
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.onSurface,
       elevation: 0,
+      scrolledUnderElevation: 0,
       shadowColor: AppColors.shadow.withValues(alpha: 0.1),
       surfaceTintColor: Colors.transparent,
+      shape: const Border(
+        bottom: BorderSide(
+          color: AppColors.divider,
+          width: AppSizes.borderWidthThin,
+        ),
+      ),
       titleTextStyle: GoogleFonts.inter(
         fontSize: AppSizes.fontXxl,
         fontWeight: FontWeight.w600,
@@ -146,7 +153,7 @@ class AppTheme {
     return BottomNavigationBarThemeData(
       backgroundColor: AppColors.surface,
       elevation: AppSizes.elevationSm,
-      selectedItemColor: AppColors.primary,
+      selectedItemColor: AppColors.onSurface,
       unselectedItemColor: AppColors.onSurfaceVariant,
       selectedLabelStyle: GoogleFonts.inter(
         fontSize: AppSizes.fontXs,
@@ -169,9 +176,13 @@ class AppTheme {
     return CardTheme(
       color: AppColors.surface,
       shadowColor: AppColors.shadow,
-      elevation: AppSizes.elevationXs,
+      elevation: AppSizes.elevationNone,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: AppColors.divider,
+          width: AppSizes.borderWidthThin,
+        ),
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
       ),
       surfaceTintColor: Colors.transparent,
@@ -255,7 +266,7 @@ class AppTheme {
   static InputDecorationTheme _inputDecorationTheme(ThemeData baseTheme) {
     return InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: AppColors.surfaceVariant,
       contentPadding: EdgeInsets.symmetric(
         horizontal: AppSizes.md,
         vertical: AppSizes.md,
@@ -358,11 +369,11 @@ class AppTheme {
   /// Snack bar theme
   static SnackBarThemeData _snackBarTheme(ThemeData baseTheme) {
     return SnackBarThemeData(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.onSurface,
       actionTextColor: AppColors.primary,
       contentTextStyle: GoogleFonts.inter(
         fontSize: AppSizes.fontMd,
-        color: AppColors.onSurface,
+        color: AppColors.white,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
