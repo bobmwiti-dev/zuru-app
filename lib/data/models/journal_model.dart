@@ -13,6 +13,8 @@ class JournalModel extends Equatable {
   final String? locationName;
   final List<String> photos;
   final List<String> tags;
+  final int likesCount;
+  final int savesCount;
   final bool isPublic;
   final bool isDeleted;
   final DateTime createdAt;
@@ -30,6 +32,8 @@ class JournalModel extends Equatable {
     this.locationName,
     this.photos = const [],
     this.tags = const [],
+    this.likesCount = 0,
+    this.savesCount = 0,
     this.isPublic = false,
     this.isDeleted = false,
     required this.createdAt,
@@ -39,6 +43,9 @@ class JournalModel extends Equatable {
 
   /// Create from Firestore document
   factory JournalModel.fromJson(Map<String, dynamic> json) {
+    final legacyLikedBy = (json['likedBy'] as List<dynamic>?)?.length ?? 0;
+    final legacySavedBy = (json['savedBy'] as List<dynamic>?)?.length ?? 0;
+
     return JournalModel(
       id: json['id'] as String?,
       userId: json['userId'] as String,
@@ -50,6 +57,8 @@ class JournalModel extends Equatable {
       locationName: json['locationName'] as String?,
       photos: (json['photos'] as List<dynamic>?)?.cast<String>() ?? [],
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      likesCount: (json['likesCount'] as num?)?.toInt() ?? legacyLikedBy,
+      savesCount: (json['savesCount'] as num?)?.toInt() ?? legacySavedBy,
       isPublic: json['isPublic'] as bool? ?? false,
       isDeleted: json['isDeleted'] as bool? ?? false,
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -71,6 +80,8 @@ class JournalModel extends Equatable {
       if (locationName != null) 'locationName': locationName,
       'photos': photos,
       'tags': tags,
+      'likesCount': likesCount,
+      'savesCount': savesCount,
       'isPublic': isPublic,
       'isDeleted': isDeleted,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -91,6 +102,8 @@ class JournalModel extends Equatable {
     String? locationName,
     List<String>? photos,
     List<String>? tags,
+    int? likesCount,
+    int? savesCount,
     bool? isPublic,
     bool? isDeleted,
     DateTime? createdAt,
@@ -108,6 +121,8 @@ class JournalModel extends Equatable {
       locationName: locationName ?? this.locationName,
       photos: photos ?? this.photos,
       tags: tags ?? this.tags,
+      likesCount: likesCount ?? this.likesCount,
+      savesCount: savesCount ?? this.savesCount,
       isPublic: isPublic ?? this.isPublic,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
@@ -146,6 +161,8 @@ class JournalModel extends Equatable {
         locationName,
         photos,
         tags,
+        likesCount,
+        savesCount,
         isPublic,
         isDeleted,
         createdAt,

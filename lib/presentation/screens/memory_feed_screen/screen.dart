@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:sizer/sizer.dart';
 
 import 'package:zuru_app/core/app_export.dart';
@@ -127,6 +128,132 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   List<JournalModel> _filteredEntries = [];
   final JournalRepository _journalRepository = JournalRepository();
 
+  Set<String> _likedJournalIds = {};
+  Set<String> _savedJournalIds = {};
+
+  Future<void> _loadReactionStateForJournals(
+    List<JournalModel> journals, {
+    required bool merge,
+  }) async {
+    final uid = _journalRepository.currentUserId;
+    if (uid == null) return;
+
+    final ids = journals
+        .map((j) => j.id)
+        .whereType<String>()
+        .where((id) => id.trim().isNotEmpty)
+        .toList();
+    if (ids.isEmpty) return;
+
+    try {
+      final liked = await _journalRepository.getLikedJournalIds(ids);
+      final saved = await _journalRepository.getSavedJournalIds(ids);
+
+      if (!mounted) return;
+      setState(() {
+        if (merge) {
+          _likedJournalIds = {..._likedJournalIds, ...liked};
+          _savedJournalIds = {..._savedJournalIds, ...saved};
+        } else {
+          _likedJournalIds = liked;
+          _savedJournalIds = saved;
+        }
+      });
+    } catch (_) {
+      // Ignore reaction state fetch errors; feed should still render.
+    }
+  }
+
+  Future<void> _toggleLikeForEntry(JournalModel entry, bool nextIsLiked) async {
+    final id = entry.id;
+    final uid = _journalRepository.currentUserId;
+    if (id == null || uid == null) return;
+
+    final previous = entry;
+    final nextCount = nextIsLiked
+        ? entry.likesCount + 1
+        : (entry.likesCount > 0 ? entry.likesCount - 1 : 0);
+    final updated = entry.copyWith(likesCount: nextCount);
+
+    final prevLikedIds = _likedJournalIds;
+    final nextLikedIds = Set<String>.from(_likedJournalIds);
+    if (nextIsLiked) {
+      nextLikedIds.add(id);
+    } else {
+      nextLikedIds.remove(id);
+    }
+
+    setState(() {
+      _journalEntries = _journalEntries
+          .map((j) => j.id == id ? updated : j)
+          .toList();
+      _filteredEntries = _filteredEntries
+          .map((j) => j.id == id ? updated : j)
+          .toList();
+      _likedJournalIds = nextLikedIds;
+    });
+
+    try {
+      await _journalRepository.toggleLike(id, isLiked: nextIsLiked);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _journalEntries = _journalEntries
+            .map((j) => j.id == id ? previous : j)
+            .toList();
+        _filteredEntries = _filteredEntries
+            .map((j) => j.id == id ? previous : j)
+            .toList();
+        _likedJournalIds = prevLikedIds;
+      });
+    }
+  }
+
+  Future<void> _toggleSaveForEntry(JournalModel entry, bool nextIsSaved) async {
+    final id = entry.id;
+    final uid = _journalRepository.currentUserId;
+    if (id == null || uid == null) return;
+
+    final previous = entry;
+    final nextCount = nextIsSaved
+        ? entry.savesCount + 1
+        : (entry.savesCount > 0 ? entry.savesCount - 1 : 0);
+    final updated = entry.copyWith(savesCount: nextCount);
+
+    final prevSavedIds = _savedJournalIds;
+    final nextSavedIds = Set<String>.from(_savedJournalIds);
+    if (nextIsSaved) {
+      nextSavedIds.add(id);
+    } else {
+      nextSavedIds.remove(id);
+    }
+
+    setState(() {
+      _journalEntries = _journalEntries
+          .map((j) => j.id == id ? updated : j)
+          .toList();
+      _filteredEntries = _filteredEntries
+          .map((j) => j.id == id ? updated : j)
+          .toList();
+      _savedJournalIds = nextSavedIds;
+    });
+
+    try {
+      await _journalRepository.toggleSave(id, isSaved: nextIsSaved);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _journalEntries = _journalEntries
+            .map((j) => j.id == id ? previous : j)
+            .toList();
+        _filteredEntries = _filteredEntries
+            .map((j) => j.id == id ? previous : j)
+            .toList();
+        _savedJournalIds = prevSavedIds;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +266,22 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _prefetchFeedImages(List<JournalModel> journals) {
+    if (!mounted) return;
+
+    final urls = <String>[];
+    for (final j in journals) {
+      if (j.photos.isNotEmpty && j.photos.first.trim().isNotEmpty) {
+        urls.add(j.photos.first);
+      }
+      if (urls.length >= 6) break;
+    }
+
+    for (final url in urls) {
+      precacheImage(CachedNetworkImageProvider(url), context);
+    }
   }
 
   /// Load real journal entries from Firestore
@@ -171,6 +314,9 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
           _filteredEntries = List.from(journals);
           _isLoading = false;
         });
+
+        _prefetchFeedImages(journals);
+        await _loadReactionStateForJournals(journals, merge: false);
       }
     } catch (e) {
       if (mounted) {
@@ -226,6 +372,9 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
           _filteredEntries = List.from(_journalEntries);
           _isLoadingMore = false;
         });
+
+        _prefetchFeedImages(moreJournals);
+        await _loadReactionStateForJournals(moreJournals, merge: true);
       }
     } catch (e) {
       if (mounted) {
@@ -310,65 +459,90 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
       appBar: _buildAppBar(theme),
       body: SafeArea(
         child:
-            _filteredEntries.isEmpty && !_isLoading
-                ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
-                : RefreshIndicator(
-                  onRefresh: _handleRefresh,
-                  color: theme.colorScheme.primary,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    physics: AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      // Greeting header
-                      SliverToBoxAdapter(
-                        child: GreetingHeaderWidget(
-                          userName: widget.user?.name,
-                          onSearchTap: () {
-                            setState(() => _isSearching = !_isSearching);
-                          },
-                        ),
+            _isLoading
+                ? CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: GreetingHeaderWidget(
+                        userName: widget.user?.name,
+                        onSearchTap: () {
+                          setState(() => _isSearching = !_isSearching);
+                        },
                       ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          return _buildShimmerPost(theme);
+                        },
+                        childCount: 4,
+                      ),
+                    ),
+                  ],
+                )
+                : _filteredEntries.isEmpty
+                    ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
+                    : RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      color: theme.colorScheme.primary,
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          // Greeting header
+                          SliverToBoxAdapter(
+                            child: GreetingHeaderWidget(
+                              userName: widget.user?.name,
+                              onSearchTap: () {
+                                setState(() => _isSearching = !_isSearching);
+                              },
+                            ),
+                          ),
 
-                      // Search bar (when active)
-                      if (_isSearching)
-                        SliverToBoxAdapter(child: _buildSearchBar(theme)),
+                          // Search bar (when active)
+                          if (_isSearching)
+                            SliverToBoxAdapter(child: _buildSearchBar(theme)),
 
-                      // Memory cards list
-                      SliverPadding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 4.w,
-                          vertical: 2.h,
-                        ),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              if (index >= _filteredEntries.length) {
-                                return _isLoadingMore
-                                    ? _buildLoadingCard(theme)
-                                    : SizedBox.shrink();
-                              }
+                          // Feed list (edge-to-edge)
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index >= _filteredEntries.length) {
+                                  return _isLoadingMore
+                                      ? _buildShimmerPost(theme)
+                                      : const SizedBox.shrink();
+                                }
 
-                              final entry = _filteredEntries[index];
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: 2.h),
-                                child: MemoryCardWidget(
+                                final entry = _filteredEntries[index];
+                                final isLiked =
+                                    entry.id != null && _likedJournalIds.contains(entry.id);
+                                final isSaved =
+                                    entry.id != null && _savedJournalIds.contains(entry.id);
+                                return MemoryCardWidget(
                                   journal: entry,
+                                  isLiked: isLiked,
+                                  isSaved: isSaved,
+                                  onLikeChanged: (isLiked) {
+                                    _toggleLikeForEntry(entry, isLiked);
+                                  },
+                                  onSaveChanged: (isSaved) {
+                                    _toggleSaveForEntry(entry, isSaved);
+                                  },
                                   onTap: () => _navigateToDetail(entry),
                                   onEdit: () => _handleEdit(entry),
                                   onShare: () => _handleShare(entry),
                                   onDelete: () => _handleDelete(entry),
-                                ),
-                              );
-                            },
-                            childCount:
-                                _filteredEntries.length +
-                                (_isLoadingMore ? 1 : 0),
+                                );
+                              },
+                              childCount:
+                                  _filteredEntries.length +
+                                  (_isLoadingMore ? 1 : 0),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
       ),
       floatingActionButton: _buildFAB(theme),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -410,15 +584,12 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: theme.colorScheme.outline,
+          width: 0.5,
+        ),
       ),
       child: TextField(
         controller: _searchController,
@@ -456,51 +627,119 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
     );
   }
 
-  /// Build loading card skeleton
-  Widget _buildLoadingCard(ThemeData theme) {
+  Widget _buildShimmerPost(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     return Container(
-      margin: EdgeInsets.only(bottom: 2.h),
-      padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outline,
+            width: 0.5,
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            height: 25.h,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.3,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 1.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+              child: Row(
+                children: [
+                  ShimmerContainer(
+                    width: 36,
+                    height: 36,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  SizedBox(width: 3.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerContainer(
+                          width: 40.w,
+                          height: 12,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        SizedBox(height: 0.6.h),
+                        ShimmerContainer(
+                          width: 28.w,
+                          height: 10,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ShimmerContainer(
+                    width: 24,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          SizedBox(height: 1.5.h),
-          Container(
-            width: 60.w,
-            height: 2.h,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.3,
+            AspectRatio(
+              aspectRatio: 1,
+              child: ShimmerContainer(
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: BorderRadius.zero,
               ),
-              borderRadius: BorderRadius.circular(4),
             ),
-          ),
-          SizedBox(height: 1.h),
-          Container(
-            width: 40.w,
-            height: 1.5.h,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.3,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.25.h),
+              child: Row(
+                children: [
+                  ShimmerContainer(
+                    width: 24,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  SizedBox(width: 3.w),
+                  ShimmerContainer(
+                    width: 24,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  SizedBox(width: 3.w),
+                  ShimmerContainer(
+                    width: 24,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  const Spacer(),
+                  ShimmerContainer(
+                    width: 24,
+                    height: 24,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(4),
             ),
-          ),
-        ],
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerContainer(
+                    width: double.infinity,
+                    height: 12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  SizedBox(height: 0.8.h),
+                  ShimmerContainer(
+                    width: 70.w,
+                    height: 12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

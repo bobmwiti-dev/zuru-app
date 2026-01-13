@@ -8,6 +8,9 @@ import 'firestore_repository.dart';
 /// Repository for journal/memory operations
 class JournalRepository extends FirestoreRepository {
   static const String _journalsCollection = 'journals';
+  static const String _usersCollection = 'users';
+  static const String _likedJournalsSubcollection = 'liked_journals';
+  static const String _savedJournalsSubcollection = 'saved_journals';
 
   /// Create a new journal entry from domain entity
   Future<JournalEntry> createEntry(JournalEntry entry) async {
@@ -313,6 +316,148 @@ class JournalRepository extends FirestoreRepository {
         'tags': FieldValue.arrayRemove(tags),
       });
     });
+  }
+
+  Future<void> toggleLike(String journalId, {required bool isLiked}) async {
+    return await executeOperation(() async {
+      final uid = currentUserId;
+      if (uid == null) {
+        throw AuthenticationException(message: 'User not authenticated');
+      }
+
+      final journalRef = firestore.collection(_journalsCollection).doc(journalId);
+      final likeRef = firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_likedJournalsSubcollection)
+          .doc(journalId);
+
+      await firestore.runTransaction((txn) async {
+        final journalSnap = await txn.get(journalRef);
+        final likeSnap = await txn.get(likeRef);
+
+        final journalData = journalSnap.data();
+        final currentCount = (journalData?['likesCount'] as num?)?.toInt() ?? 0;
+
+        if (isLiked) {
+          if (likeSnap.exists) return;
+
+          txn.set(likeRef, {
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          txn.update(journalRef, {
+            'likesCount': currentCount + 1,
+          });
+        } else {
+          if (!likeSnap.exists) return;
+
+          txn.delete(likeRef);
+          txn.update(journalRef, {
+            'likesCount': currentCount > 0 ? currentCount - 1 : 0,
+          });
+        }
+      });
+    });
+  }
+
+  Future<void> toggleSave(String journalId, {required bool isSaved}) async {
+    return await executeOperation(() async {
+      final uid = currentUserId;
+      if (uid == null) {
+        throw AuthenticationException(message: 'User not authenticated');
+      }
+
+      final journalRef = firestore.collection(_journalsCollection).doc(journalId);
+      final saveRef = firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_savedJournalsSubcollection)
+          .doc(journalId);
+
+      await firestore.runTransaction((txn) async {
+        final journalSnap = await txn.get(journalRef);
+        final saveSnap = await txn.get(saveRef);
+
+        final journalData = journalSnap.data();
+        final currentCount = (journalData?['savesCount'] as num?)?.toInt() ?? 0;
+
+        if (isSaved) {
+          if (saveSnap.exists) return;
+
+          txn.set(saveRef, {
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          txn.update(journalRef, {
+            'savesCount': currentCount + 1,
+          });
+        } else {
+          if (!saveSnap.exists) return;
+
+          txn.delete(saveRef);
+          txn.update(journalRef, {
+            'savesCount': currentCount > 0 ? currentCount - 1 : 0,
+          });
+        }
+      });
+    });
+  }
+
+  Future<Set<String>> getLikedJournalIds(List<String> journalIds) async {
+    return await executeOperation(() async {
+      final uid = currentUserId;
+      if (uid == null) {
+        throw AuthenticationException(message: 'User not authenticated');
+      }
+
+      final ids = journalIds.where((e) => e.trim().isNotEmpty).toList();
+      if (ids.isEmpty) return <String>{};
+
+      final liked = <String>{};
+      final likedCol = firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_likedJournalsSubcollection);
+
+      for (final chunk in _chunksOf(ids, 10)) {
+        final snap = await likedCol
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        liked.addAll(snap.docs.map((d) => d.id));
+      }
+      return liked;
+    });
+  }
+
+  Future<Set<String>> getSavedJournalIds(List<String> journalIds) async {
+    return await executeOperation(() async {
+      final uid = currentUserId;
+      if (uid == null) {
+        throw AuthenticationException(message: 'User not authenticated');
+      }
+
+      final ids = journalIds.where((e) => e.trim().isNotEmpty).toList();
+      if (ids.isEmpty) return <String>{};
+
+      final saved = <String>{};
+      final savedCol = firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_savedJournalsSubcollection);
+
+      for (final chunk in _chunksOf(ids, 10)) {
+        final snap = await savedCol
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        saved.addAll(snap.docs.map((d) => d.id));
+      }
+      return saved;
+    });
+  }
+
+  Iterable<List<T>> _chunksOf<T>(List<T> items, int size) sync* {
+    for (var i = 0; i < items.length; i += size) {
+      yield items.sublist(i, i + size > items.length ? items.length : i + size);
+    }
   }
 
   /// Update user journal count
