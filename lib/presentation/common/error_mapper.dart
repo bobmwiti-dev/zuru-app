@@ -65,6 +65,18 @@ class ErrorMapper {
         return 'Too many failed attempts. Please wait a few minutes and try again.';
       case 'network-error':
         return 'Network connection failed. Please check your internet and try again.';
+      case 'google_signin_cancelled':
+        return 'Login cancelled.';
+      case 'google_signin_failed':
+        return 'Couldn\'t log you in with Google. Please try again.';
+      case 'google_signin_no_user':
+        return 'Couldn\'t complete Google login. Please try again.';
+      case 'apple_signin_cancelled':
+        return 'Login cancelled.';
+      case 'apple_signin_failed':
+        return 'Couldn\'t log you in with Apple. Please try again.';
+      case 'apple_signin_no_user':
+        return 'Couldn\'t complete Apple login. Please try again.';
       default:
         return exception.message;
     }
