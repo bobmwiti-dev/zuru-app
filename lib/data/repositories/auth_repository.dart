@@ -47,7 +47,8 @@ class AuthRepositoryImpl implements AuthRepository {
     final firebaseConfig = Environment.config.firebaseConfig;
     if (Environment.isDevelopment &&
         (firebaseConfig.apiKey.contains('dev-api-key') ||
-            firebaseConfig.projectId == 'zuru-dev')) {
+            firebaseConfig.apiKey.contains('DUMMY') ||
+            firebaseConfig.apiKey == 'prod-api-key-here')) {
       // Simulate successful signin for development
       await Future.delayed(
         const Duration(seconds: 1),
@@ -88,7 +89,8 @@ class AuthRepositoryImpl implements AuthRepository {
     final firebaseConfig = Environment.config.firebaseConfig;
     if (Environment.isDevelopment &&
         (firebaseConfig.apiKey.contains('dev-api-key') ||
-            firebaseConfig.projectId == 'zuru-dev')) {
+            firebaseConfig.apiKey.contains('DUMMY') ||
+            firebaseConfig.apiKey == 'prod-api-key-here')) {
       // Simulate successful signup for development
       await Future.delayed(
         const Duration(seconds: 1),
@@ -224,6 +226,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       // Create AuthUser from Firebase user
       return AuthUser(
+        id: user.uid,
         email: user.email ?? '',
         name: user.displayName ?? 'Google User',
         avatarUrl: user.photoURL,
@@ -284,6 +287,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final email = user.email ?? appleCredential.email ?? '';
 
       return AuthUser(
+        id: user.uid,
         email: email,
         name: displayName,
         avatarUrl: user.photoURL,
@@ -315,10 +319,11 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthUser?> getCurrentUser() async {
     final user = _firebaseAuth.currentUser;
     if (user == null) return null;
+    if (user.isAnonymous) return null;
 
     return AuthUser(
       id: user.uid,
-      email: user.email!,
+      email: user.email ?? '',
       name: user.displayName,
       avatarUrl: user.photoURL,
       createdAt: user.metadata.creationTime!,
@@ -328,7 +333,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> isSignedIn() async {
-    return _firebaseAuth.currentUser != null;
+    final user = _firebaseAuth.currentUser;
+    return user != null && !user.isAnonymous;
   }
 
   @override
