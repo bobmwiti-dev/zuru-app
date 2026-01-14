@@ -14,91 +14,129 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final mq = MediaQuery.of(context);
+    final softText = theme.colorScheme.onSurface.withValues(alpha: 0.92);
+    final mutedText = theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.82);
 
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Illustration
-            Container(
-              width: 60.w,
-              height: 30.h,
-              decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Center(
-                child: CustomIconWidget(
-                  iconName: 'auto_stories',
-                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                  size: 80,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: 8.w),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight:
+                  (mq.size.height - mq.padding.vertical)
+                      .clamp(0.0, double.infinity),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.98, end: 1.0),
+                    duration: const Duration(milliseconds: 520),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, scale, child) {
+                      return Transform.scale(scale: scale, child: child);
+                    },
+                    child: Container(
+                      width: 20.w,
+                      height: 20.w,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withValues(alpha: 0.18),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: CustomIconWidget(
+                          iconName: 'auto_stories',
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                          size: 44,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 4.h),
+
+                  // Title
+                  Text(
+                    'Your Story Starts Here',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                      color: softText,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  SizedBox(height: 1.5.h),
+
+                  // Description
+                  Text(
+                    'Capture your moments, emotions, and experiences.\nEvery memory matters.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.4,
+                      color: mutedText,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  SizedBox(height: 4.h),
+
+                  // CTA Button
+                  Align(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: onCreateMemory,
+                          icon: CustomIconWidget(
+                            iconName: 'add',
+                            color: theme.colorScheme.onPrimary,
+                            size: 22,
+                          ),
+                          label: const Text('Create your first memory'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 1.8.h,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 2.h),
+
+                  // Secondary action
+                  TextButton.icon(
+                    onPressed: () {
+                      // Show tips or tutorial
+                      _showTips(context);
+                    },
+                    icon: CustomIconWidget(
+                      iconName: 'lightbulb_outline',
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    label: const Text('Learn how it works'),
+                  ),
+                ],
               ),
             ),
-
-            SizedBox(height: 4.h),
-
-            // Title
-            Text(
-              'Your Story Starts Here',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            SizedBox(height: 1.5.h),
-
-            // Description
-            Text(
-              'Capture your moments, emotions, and experiences.\nEvery memory matters.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            SizedBox(height: 4.h),
-
-            // CTA Button
-            ElevatedButton.icon(
-              onPressed: onCreateMemory,
-              icon: CustomIconWidget(
-                iconName: 'add',
-                color: theme.colorScheme.onPrimary,
-                size: 24,
-              ),
-              label: Text('Create Your First Memory'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.8.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-
-            SizedBox(height: 2.h),
-
-            // Secondary action
-            TextButton.icon(
-              onPressed: () {
-                // Show tips or tutorial
-                _showTips(context);
-              },
-              icon: CustomIconWidget(
-                iconName: 'lightbulb_outline',
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
-              label: Text('Learn How It Works'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
