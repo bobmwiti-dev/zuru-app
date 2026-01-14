@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuru_app/data/repositories/auth_repository.dart';
 import 'package:zuru_app/domain/models/auth_user.dart';
+import 'package:zuru_app/presentation/common/error_mapper.dart';
 
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -36,7 +37,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
       state = const AuthState.unauthenticated();
     } catch (e) {
-      state = AuthState.error('Failed to check authentication status');
+      state = AuthState.error(ErrorMapper.mapError(e));
     }
   }
 
@@ -47,7 +48,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.signIn(email, password);
       state = AuthState.authenticated(user);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthState.error(ErrorMapper.mapError(e));
       rethrow;
     }
   }
@@ -59,7 +60,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.signUp(email, password, name);
       state = AuthState.authenticated(user);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthState.error(ErrorMapper.mapError(e));
       rethrow;
     }
   }
@@ -71,7 +72,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.signInWithGoogle();
       state = AuthState.authenticated(user);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthState.error(ErrorMapper.mapError(e));
       rethrow;
     }
   }
@@ -83,7 +84,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.signInWithApple();
       state = AuthState.authenticated(user);
     } catch (e) {
-      state = AuthState.error(e.toString());
+      state = AuthState.error(ErrorMapper.mapError(e));
       rethrow;
     }
   }
@@ -100,7 +101,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _authRepository.signOut();
       state = const AuthState.unauthenticated();
     } catch (e) {
-      state = AuthState.error('Failed to sign out');
+      state = AuthState.error(ErrorMapper.mapError(e));
+      rethrow;
+    }
+  }
+
+  // Reset password
+  Future<void> resetPassword(String email) async {
+    state = const AuthState.loading();
+    try {
+      await _authRepository.resetPassword(email);
+      state = const AuthState.unauthenticated();
+    } catch (e) {
+      state = AuthState.error(ErrorMapper.mapError(e));
       rethrow;
     }
   }
