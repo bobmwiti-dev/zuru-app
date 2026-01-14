@@ -45,6 +45,7 @@ class MemoryCardWidget extends StatefulWidget {
   bool _isSaved = false;
   int _likesCount = 0;
   bool _showHeart = false;
+  bool _isMediaLoading = false;
   late final AnimationController _heartController;
   late final Animation<double> _heartScale;
   Timer? _heartHideTimer;
@@ -52,12 +53,22 @@ class MemoryCardWidget extends StatefulWidget {
   late final AnimationController _pressController;
   late final Animation<double> _pressScale;
 
+  late final AnimationController _likePulseController;
+  late final Animation<double> _likePulse;
+
+  late final AnimationController _savePulseController;
+  late final Animation<double> _savePulse;
+
+  late final AnimationController _scanlineController;
+  late final Animation<double> _scanlineX;
+
   @override
   void initState() {
     super.initState();
     _isLiked = widget.isLiked;
     _isSaved = widget.isSaved;
     _likesCount = widget.journal.likesCount;
+    _isMediaLoading = false;
 
     _heartController = AnimationController(
       vsync: this,
@@ -81,6 +92,36 @@ class MemoryCardWidget extends StatefulWidget {
         curve: Curves.easeOut,
         reverseCurve: Curves.easeOut,
       ),
+    );
+
+    _likePulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    );
+    _likePulse = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.14), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.14, end: 1.0), weight: 45),
+    ]).animate(
+      CurvedAnimation(parent: _likePulseController, curve: Curves.easeOut),
+    );
+
+    _savePulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _savePulse = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.12), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0), weight: 45),
+    ]).animate(
+      CurvedAnimation(parent: _savePulseController, curve: Curves.easeOut),
+    );
+
+    _scanlineController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+    _scanlineX = Tween<double>(begin: -1.2, end: 1.2).animate(
+      CurvedAnimation(parent: _scanlineController, curve: Curves.easeInOut),
     );
   }
 
@@ -108,6 +149,9 @@ class MemoryCardWidget extends StatefulWidget {
     _heartHideTimer?.cancel();
     _heartController.dispose();
     _pressController.dispose();
+    _likePulseController.dispose();
+    _savePulseController.dispose();
+    _scanlineController.dispose();
     super.dispose();
   }
 
@@ -137,6 +181,8 @@ class MemoryCardWidget extends StatefulWidget {
       HapticFeedback.selectionClick();
     }
 
+    _likePulseController.forward(from: 0);
+
     widget.onLikeChanged?.call(next);
 
     if (showHeartOverlay) {
@@ -160,17 +206,142 @@ class MemoryCardWidget extends StatefulWidget {
         barrierColor: Colors.black,
         barrierDismissible: true,
         barrierLabel: 'Dismiss',
+        transitionDuration: const Duration(milliseconds: 340),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
         pageBuilder: (context, animation, secondaryAnimation) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeOutCubic,
+          );
+
           return FadeTransition(
-            opacity: animation,
-            child: _MediaViewerScreen(
-              imageUrl: widget.journal.photos.first,
-              heroTag: _heroTag,
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+              child: _MediaViewerScreen(
+                imageUrl: widget.journal.photos.first,
+                heroTag: _heroTag,
+              ),
             ),
           );
         },
       ),
     );
+  }
+
+  Widget _buildNeonMediaPlaceholder({
+    required ThemeData theme,
+  }) {
+    if (!_isMediaLoading) {
+      return Container(color: theme.colorScheme.surfaceContainerHighest);
+    }
+
+    final base = theme.colorScheme.surfaceContainerHighest;
+    final highlight = theme.colorScheme.onSurface.withValues(alpha: 0.08);
+
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: base),
+          AnimatedBuilder(
+            animation: _scanlineController,
+            builder: (context, child) {
+              return FractionalTranslation(
+                translation: Offset(_scanlineX.value, 0),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.transparent,
+                        highlight,
+                        Colors.white.withValues(alpha: 0.10),
+                        highlight,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.04),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.18),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNeonLoadingScanline({
+    required Color highlight,
+  }) {
+    if (!_isMediaLoading) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _scanlineController,
+          builder: (context, child) {
+            return FractionalTranslation(
+              translation: Offset(_scanlineX.value, 0),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.transparent,
+                      highlight.withValues(alpha: 0.12),
+                      Colors.white.withValues(alpha: 0.24),
+                      highlight.withValues(alpha: 0.12),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _setMediaLoading(bool isLoading) {
+    if (!mounted) return;
+    if (_isMediaLoading == isLoading) return;
+
+    setState(() => _isMediaLoading = isLoading);
+
+    if (isLoading) {
+      if (!_scanlineController.isAnimating) {
+        _scanlineController.repeat();
+      }
+    } else {
+      if (_scanlineController.isAnimating) {
+        _scanlineController.stop();
+      }
+    }
   }
 
   @override
@@ -179,12 +350,6 @@ class MemoryCardWidget extends StatefulWidget {
     final colorScheme = theme.colorScheme;
 
     final captionText = widget.journal.content;
-
-    final neonCyan = const Color(0xFF00E5FF);
-    final neonPurple = const Color(0xFFB000FF);
-    final borderColor = Color.lerp(neonCyan, neonPurple, 0.55)!.withValues(
-      alpha: 0.55,
-    );
 
     return Slidable(
       key: ValueKey(widget.journal.id ?? widget.journal.createdAt),
@@ -197,8 +362,8 @@ class MemoryCardWidget extends StatefulWidget {
               HapticFeedback.selectionClick();
               widget.onEdit();
             },
-            backgroundColor: neonPurple.withValues(alpha: 0.22),
-            foregroundColor: neonPurple,
+            backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.35),
+            foregroundColor: colorScheme.primary,
             icon: Icons.edit,
             label: 'Edit',
             borderRadius: BorderRadius.circular(16),
@@ -208,8 +373,10 @@ class MemoryCardWidget extends StatefulWidget {
               HapticFeedback.selectionClick();
               widget.onShare();
             },
-            backgroundColor: neonCyan.withValues(alpha: 0.18),
-            foregroundColor: neonCyan,
+            backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.80,
+            ),
+            foregroundColor: colorScheme.onSurface,
             icon: Icons.send_outlined,
             label: 'Share',
             borderRadius: BorderRadius.circular(16),
@@ -226,8 +393,11 @@ class MemoryCardWidget extends StatefulWidget {
               HapticFeedback.selectionClick();
               setState(() => _isSaved = next);
               widget.onSaveChanged?.call(next);
+              _savePulseController.forward(from: 0);
             },
-            backgroundColor: borderColor.withValues(alpha: 0.20),
+            backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.80,
+            ),
             foregroundColor: colorScheme.onSurface,
             icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
             label: _isSaved ? 'Saved' : 'Save',
@@ -249,33 +419,13 @@ class MemoryCardWidget extends StatefulWidget {
       child: AnimatedBuilder(
         animation: _pressController,
         builder: (context, child) {
-          final t = Curves.easeOut.transform(_pressController.value);
-          final glow = 0.18 + (0.10 * t);
-
           return Transform.scale(
             scale: _pressScale.value,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: neonCyan.withValues(alpha: glow),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 10),
-                  ),
-                  BoxShadow(
-                    color: neonPurple.withValues(alpha: glow * 0.75),
-                    blurRadius: 22,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 14),
-                  ),
-                ],
-              ),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 1.5.h),
               child: Material(
-                color: Colors.transparent,
+                color: colorScheme.surface,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
                   onTap: widget.onTap,
                   onLongPress: () {
                     HapticFeedback.mediumImpact();
@@ -291,38 +441,32 @@ class MemoryCardWidget extends StatefulWidget {
                   onTapUp: (_) {
                     _pressController.reverse();
                   },
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: borderColor,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(context),
-                        _buildMedia(theme),
-                        _buildActionsRow(context),
-                        if (_likesCount > 0)
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4.w),
-                            child: Text(
-                              '$_likesCount likes',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(context),
+                      _buildMedia(theme),
+                      _buildActionsRow(context),
+                      if (_likesCount > 0)
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4.w),
+                          child: Text(
+                            '$_likesCount likes',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        _buildCaption(theme, captionText),
-                        _buildMeta(theme),
-                        SizedBox(height: 1.h),
-                      ],
-                    ),
+                        ),
+                      _buildCaption(theme, captionText),
+                      _buildMeta(theme),
+                      SizedBox(height: 1.h),
+                      Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.28),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -399,42 +543,106 @@ class MemoryCardWidget extends StatefulWidget {
     final hasMedia =
         widget.journal.photos.isNotEmpty &&
         widget.journal.photos.first.trim().isNotEmpty;
+    final highlight = theme.colorScheme.onSurface.withValues(alpha: 0.08);
+
+    if (!hasMedia) {
+      _setMediaLoading(false);
+    }
 
     return AspectRatio(
       aspectRatio: 1,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (hasMedia)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _openMediaViewer,
-              onDoubleTap: () {
-                HapticFeedback.lightImpact();
-                _toggleLike(showHeartOverlay: true);
-              },
-              child: Hero(
-                tag: _heroTag,
-                child: CustomImageWidget(
-                  imageUrl: widget.journal.photos.first,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.cover,
-                  semanticLabel: 'Journal entry image',
-                ),
-              ),
-            )
-          else
-            Container(
-              color: colorScheme.surfaceContainerHighest,
-              child: Center(
-                child: Icon(
-                  Icons.image_outlined,
-                  color: colorScheme.onSurfaceVariant,
-                  size: 32,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child:
+                hasMedia
+                    ? GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _openMediaViewer,
+                      onDoubleTap: () {
+                        HapticFeedback.lightImpact();
+                        _toggleLike(showHeartOverlay: true);
+                      },
+                      child: Hero(
+                        tag: _heroTag,
+                        child: CachedNetworkImage(
+                          imageUrl: widget.journal.photos.first,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          imageBuilder: (context, imageProvider) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _setMediaLoading(false);
+                            });
+
+                            return Image(
+                              image: imageProvider,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            );
+                          },
+                          placeholder: (context, url) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _setMediaLoading(true);
+                            });
+
+                            return _buildNeonMediaPlaceholder(
+                              theme: theme,
+                            );
+                          },
+                          errorWidget: (context, url, error) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _setMediaLoading(false);
+                            });
+
+                            return Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  color: colorScheme.onSurfaceVariant,
+                                  size: 32,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    )
+                    : Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.06),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.45),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
                 ),
               ),
             ),
+          ),
+          _buildNeonLoadingScanline(highlight: highlight),
           if (_showHeart)
             Center(
               child: ScaleTransition(
@@ -463,9 +671,27 @@ class MemoryCardWidget extends StatefulWidget {
               HapticFeedback.selectionClick();
               _toggleLike(showHeartOverlay: false);
             },
-            icon: Icon(
-              _isLiked ? Icons.favorite : Icons.favorite_border,
-              color: _isLiked ? AppColors.secondary : colorScheme.onSurface,
+            icon: AnimatedBuilder(
+              animation: _likePulseController,
+              builder: (context, child) {
+                final isActive = _isLiked;
+                return Transform.scale(
+                  scale: _likePulse.value,
+                  child: Icon(
+                    isActive ? Icons.favorite : Icons.favorite_border,
+                    color: isActive ? Colors.redAccent : colorScheme.onSurface,
+                    shadows:
+                        isActive
+                            ? [
+                              Shadow(
+                                color: Colors.redAccent.withValues(alpha: 0.25),
+                                blurRadius: 14,
+                              ),
+                            ]
+                            : null,
+                  ),
+                );
+              },
             ),
             tooltip: 'Like',
           ),
@@ -495,10 +721,32 @@ class MemoryCardWidget extends StatefulWidget {
               HapticFeedback.selectionClick();
               setState(() => _isSaved = next);
               widget.onSaveChanged?.call(next);
+              _savePulseController.forward(from: 0);
             },
-            icon: Icon(
-              _isSaved ? Icons.bookmark : Icons.bookmark_border,
-              color: colorScheme.onSurface,
+            icon: AnimatedBuilder(
+              animation: _savePulseController,
+              builder: (context, child) {
+                final isActive = _isSaved;
+                return Transform.scale(
+                  scale: _savePulse.value,
+                  child: Icon(
+                    isActive ? Icons.bookmark : Icons.bookmark_border,
+                    color:
+                        isActive
+                            ? colorScheme.primary
+                            : colorScheme.onSurface,
+                    shadows:
+                        isActive
+                            ? [
+                              Shadow(
+                                color: colorScheme.primary.withValues(alpha: 0.18),
+                                blurRadius: 14,
+                              ),
+                            ]
+                            : null,
+                  ),
+                );
+              },
             ),
             tooltip: 'Save',
           ),
