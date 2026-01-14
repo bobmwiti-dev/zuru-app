@@ -67,8 +67,6 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
     _descriptionController.dispose();
     _locationController.dispose();
     _tagController.dispose();
-    _descriptionController.dispose();
-    _locationController.dispose();
     _cameraController?.dispose();
     super.dispose();
   }
@@ -134,7 +132,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
   /// Fetch current location using GPS
   Future<void> _fetchCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
+    if (mounted) {
+      setState(() => _isLoadingLocation = true);
+    }
 
     try {
       // Request location permission
@@ -142,7 +142,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         final status = await Permission.location.request();
         if (!status.isGranted) {
           _showPermissionDialog('Location');
-          setState(() => _isLoadingLocation = false);
+          if (mounted) {
+            setState(() => _isLoadingLocation = false);
+          }
           return;
         }
       }
@@ -151,7 +153,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showLocationServiceDialog();
-        setState(() => _isLoadingLocation = false);
+        if (mounted) {
+          setState(() => _isLoadingLocation = false);
+        }
         return;
       }
 
@@ -165,14 +169,17 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
       // Mock location name (in production, use reverse geocoding)
       _locationName = 'Nairobi, Kenya';
-      _locationController.text = _locationName ?? '';
+      if (!mounted) return;
 
+      _locationController.text = _locationName ?? '';
       if (mounted) {
         setState(() => _isLoadingLocation = false);
       }
     } catch (e) {
       debugPrint('Location fetch error: $e');
-      setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
     }
   }
 
@@ -184,7 +191,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
     try {
       final XFile photo = await _cameraController!.takePicture();
-      setState(() => _capturedImage = photo);
+      if (mounted) {
+        setState(() => _capturedImage = photo);
+      }
     } catch (e) {
       debugPrint('Photo capture error: $e');
       _showErrorSnackBar('Failed to capture photo');
@@ -198,7 +207,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
       if (image != null) {
-        setState(() => _capturedImage = image);
+        if (mounted) {
+          setState(() => _capturedImage = image);
+        }
       }
     } catch (e) {
       debugPrint('Gallery selection error: $e');
