@@ -22,71 +22,9 @@ class MemoryFeedScreen extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
 
-    return Scaffold(
-      appBar: CustomAppBar(
-        title: 'My Journal',
-        actions: [
-          // User profile button
-          if (user != null)
-            PopupMenuButton<String>(
-              icon: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  user.name?.isNotEmpty == true
-                      ? user.name![0].toUpperCase()
-                      : 'U',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              onSelected: (value) {
-                if (value == 'logout') {
-                  _handleLogout(context, ref);
-                }
-              },
-              itemBuilder:
-                  (context) => [
-                    PopupMenuItem(
-                      value: 'profile',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person, size: 20),
-                          SizedBox(width: 8),
-                          Text('Profile'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'settings',
-                      child: Row(
-                        children: [
-                          Icon(Icons.settings, size: 20),
-                          SizedBox(width: 8),
-                          Text('Settings'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(enabled: false, height: 1, child: Divider()),
-                    PopupMenuItem(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          Icon(Icons.logout, size: 20, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Sign Out', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-            ),
-        ],
-      ),
-      body: _MemoryFeedContent(
-        user: user,
-        onLogout: () => _handleLogout(context, ref),
-      ),
+    return _MemoryFeedContent(
+      user: user,
+      onLogout: () => _handleLogout(context, ref),
     );
   }
 
@@ -453,98 +391,91 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(theme),
       body: SafeArea(
-        child:
-            _isLoading
-                ? CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: GreetingHeaderWidget(
-                        userName: widget.user?.name,
-                        onSearchTap: () {
-                          setState(() => _isSearching = !_isSearching);
-                        },
-                      ),
+        child: _isLoading
+            ? CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: GreetingHeaderWidget(
+                      userName: widget.user?.name,
+                      onSearchTap: () {
+                        setState(() => _isSearching = !_isSearching);
+                      },
                     ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          return _buildShimmerPost(theme);
-                        },
-                        childCount: 4,
-                      ),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return _buildShimmerPost(theme);
+                      },
+                      childCount: 4,
                     ),
-                  ],
-                )
-                : _filteredEntries.isEmpty
-                    ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
-                    : RefreshIndicator(
-                      onRefresh: _handleRefresh,
-                      color: theme.colorScheme.primary,
-                      child: CustomScrollView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        slivers: [
-                          // Greeting header
-                          SliverToBoxAdapter(
-                            child: GreetingHeaderWidget(
-                              userName: widget.user?.name,
-                              onSearchTap: () {
-                                setState(() => _isSearching = !_isSearching);
-                              },
-                            ),
+                  ),
+                ],
+              )
+            : _filteredEntries.isEmpty
+                ? EmptyStateWidget(onCreateMemory: _navigateToAddJournal)
+                : RefreshIndicator(
+                    onRefresh: _handleRefresh,
+                    color: theme.colorScheme.primary,
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: GreetingHeaderWidget(
+                            userName: widget.user?.name,
+                            onSearchTap: () {
+                              setState(() => _isSearching = !_isSearching);
+                            },
                           ),
+                        ),
+                        if (_isSearching)
+                          SliverToBoxAdapter(child: _buildSearchBar(theme)),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index >= _filteredEntries.length) {
+                                return _isLoadingMore
+                                    ? _buildShimmerPost(theme)
+                                    : const SizedBox.shrink();
+                              }
 
-                          // Search bar (when active)
-                          if (_isSearching)
-                            SliverToBoxAdapter(child: _buildSearchBar(theme)),
-
-                          // Feed list (edge-to-edge)
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                if (index >= _filteredEntries.length) {
-                                  return _isLoadingMore
-                                      ? _buildShimmerPost(theme)
-                                      : const SizedBox.shrink();
-                                }
-
-                                final entry = _filteredEntries[index];
-                                final isLiked =
-                                    entry.id != null && _likedJournalIds.contains(entry.id);
-                                final isSaved =
-                                    entry.id != null && _savedJournalIds.contains(entry.id);
-                                return MemoryCardWidget(
-                                  journal: entry,
-                                  isLiked: isLiked,
-                                  isSaved: isSaved,
-                                  onLikeChanged: (isLiked) {
-                                    _toggleLikeForEntry(entry, isLiked);
-                                  },
-                                  onSaveChanged: (isSaved) {
-                                    _toggleSaveForEntry(entry, isSaved);
-                                  },
-                                  onTap: () => _navigateToDetail(entry),
-                                  onEdit: () => _handleEdit(entry),
-                                  onShare: () => _handleShare(entry),
-                                  onDelete: () => _handleDelete(entry),
-                                );
-                              },
-                              childCount:
-                                  _filteredEntries.length +
-                                  (_isLoadingMore ? 1 : 0),
-                            ),
+                              final entry = _filteredEntries[index];
+                              final isLiked = entry.id != null &&
+                                  _likedJournalIds.contains(entry.id);
+                              final isSaved = entry.id != null &&
+                                  _savedJournalIds.contains(entry.id);
+                              return MemoryCardWidget(
+                                journal: entry,
+                                isLiked: isLiked,
+                                isSaved: isSaved,
+                                onLikeChanged: (isLiked) {
+                                  _toggleLikeForEntry(entry, isLiked);
+                                },
+                                onSaveChanged: (isSaved) {
+                                  _toggleSaveForEntry(entry, isSaved);
+                                },
+                                onTap: () => _navigateToDetail(entry),
+                                onEdit: () => _handleEdit(entry),
+                                onShare: () => _handleShare(entry),
+                                onDelete: () => _handleDelete(entry),
+                              );
+                            },
+                            childCount:
+                                _filteredEntries.length +
+                                (_isLoadingMore ? 1 : 0),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
       ),
-      floatingActionButton: _buildFAB(theme),
+      floatingActionButton:
+          (_isLoading || _filteredEntries.isEmpty) ? null : _buildFAB(theme),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: CustomBottomBar(
         currentIndex: _currentBottomNavIndex,
@@ -630,115 +561,143 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   Widget _buildShimmerPost(ThemeData theme) {
     final colorScheme = theme.colorScheme;
 
+    final neonCyan = const Color(0xFF00E5FF);
+    final neonPurple = const Color(0xFFB000FF);
+    final borderColor = Color.lerp(neonCyan, neonPurple, 0.55)!.withValues(
+      alpha: 0.22,
+    );
+
     return Container(
+      margin: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outline,
-            width: 0.5,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: neonCyan.withValues(alpha: 0.10),
+            blurRadius: 18,
+            spreadRadius: 1,
+            offset: const Offset(0, 10),
           ),
-        ),
+          BoxShadow(
+            color: neonPurple.withValues(alpha: 0.08),
+            blurRadius: 22,
+            spreadRadius: 1,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: 1.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
-              child: Row(
-                children: [
-                  ShimmerContainer(
-                    width: 36,
-                    height: 36,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  SizedBox(width: 3.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerContainer(
-                          width: 40.w,
-                          height: 12,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        SizedBox(height: 0.6.h),
-                        ShimmerContainer(
-                          width: 28.w,
-                          height: 10,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 1.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+                child: Row(
+                  children: [
+                    ShimmerContainer(
+                      width: 36,
+                      height: 36,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ShimmerContainer(
+                            width: 40.w,
+                            height: 12,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          SizedBox(height: 0.6.h),
+                          ShimmerContainer(
+                            width: 28.w,
+                            height: 10,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ShimmerContainer(
+                      width: 24,
+                      height: 24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ShimmerContainer(
+                      width: double.infinity,
+                      height: double.infinity,
+                      borderRadius: BorderRadius.zero,
                     ),
                   ),
-                  ShimmerContainer(
-                    width: 24,
-                    height: 24,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ],
+                ),
               ),
-            ),
-            AspectRatio(
-              aspectRatio: 1,
-              child: ShimmerContainer(
-                width: double.infinity,
-                height: double.infinity,
-                borderRadius: BorderRadius.zero,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.25.h),
+                child: Row(
+                  children: [
+                    ShimmerContainer(
+                      width: 24,
+                      height: 24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    SizedBox(width: 3.w),
+                    ShimmerContainer(
+                      width: 24,
+                      height: 24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    SizedBox(width: 3.w),
+                    ShimmerContainer(
+                      width: 24,
+                      height: 24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    const Spacer(),
+                    ShimmerContainer(
+                      width: 24,
+                      height: 24,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.25.h),
-              child: Row(
-                children: [
-                  ShimmerContainer(
-                    width: 24,
-                    height: 24,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  SizedBox(width: 3.w),
-                  ShimmerContainer(
-                    width: 24,
-                    height: 24,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  SizedBox(width: 3.w),
-                  ShimmerContainer(
-                    width: 24,
-                    height: 24,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  const Spacer(),
-                  ShimmerContainer(
-                    width: 24,
-                    height: 24,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ],
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerContainer(
+                      width: double.infinity,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    SizedBox(height: 0.8.h),
+                    ShimmerContainer(
+                      width: 70.w,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ShimmerContainer(
-                    width: double.infinity,
-                    height: 12,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  SizedBox(height: 0.8.h),
-                  ShimmerContainer(
-                    width: 70.w,
-                    height: 12,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
