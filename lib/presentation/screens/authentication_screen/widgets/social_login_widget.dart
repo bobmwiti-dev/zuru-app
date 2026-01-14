@@ -1,6 +1,5 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
@@ -24,7 +23,8 @@ class SocialLoginWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool showAppleSignIn = kIsWeb || Platform.isIOS;
+    final bool showAppleSignIn =
+        kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
 
     return Column(
       children: [
