@@ -2,7 +2,7 @@
   "environment": "dev",
   "apiBaseUrl": "https://api.zuru.dev",
   "firebase": {
-    "apiKey": "AIzaSyDUMMY_API_KEY_FOR_DEVELOPMENT_ONLY",
+    "apiKey": "DUMMY_GOOGLE_API_KEY_FOR_DEVELOPMENT_ONLY",
     "authDomain": "zuru-dev.firebaseapp.com",
     "projectId": "zuru-dev",
     "storageBucket": "zuru-dev.appspot.com",
