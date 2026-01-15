@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
 import '../../../../widgets/custom_icon_widget.dart';
@@ -56,7 +55,7 @@ class AuthFormWidget extends StatelessWidget {
                 return null;
               },
             ),
-            SizedBox(height: 2.h),
+            const SizedBox(height: 16),
           ],
 
           // Email field
@@ -79,7 +78,7 @@ class AuthFormWidget extends StatelessWidget {
             },
           ),
 
-          SizedBox(height: 2.h),
+          const SizedBox(height: 16),
 
           // Password field
           _buildTextField(
@@ -104,13 +103,13 @@ class AuthFormWidget extends StatelessWidget {
 
           // Password strength indicator (only for sign up)
           if (isSignUpMode && passwordController.text.isNotEmpty) ...[
-            SizedBox(height: 1.h),
+            const SizedBox(height: 8),
             _buildPasswordStrengthIndicator(context),
           ],
 
           // Forgot password link (only for sign in)
           if (!isSignUpMode) ...[
-            SizedBox(height: 1.h),
+            const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: GestureDetector(
@@ -154,7 +153,7 @@ class AuthFormWidget extends StatelessWidget {
         labelText: label,
         hintText: hint,
         prefixIcon: Padding(
-          padding: EdgeInsets.all(3.w),
+          padding: const EdgeInsets.all(16),
           child: CustomIconWidget(
             iconName: prefixIcon,
             color: theme.colorScheme.onSurfaceVariant,
@@ -165,7 +164,7 @@ class AuthFormWidget extends StatelessWidget {
             ? GestureDetector(
                 onTap: onSuffixIconTap,
                 child: Padding(
-                  padding: EdgeInsets.all(3.w),
+                  padding: const EdgeInsets.all(16),
                   child: CustomIconWidget(
                     iconName: suffixIcon,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -259,7 +258,7 @@ class AuthFormWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            SizedBox(width: 2.w),
+            const SizedBox(width: 12),
             Text(
               strengthText,
               style: theme.textTheme.bodySmall?.copyWith(

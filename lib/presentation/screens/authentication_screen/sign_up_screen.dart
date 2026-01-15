@@ -1,6 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
 import '../../../providers/auth_provider.dart';
@@ -23,6 +24,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+
+  ProviderSubscription<AuthState>? _authStateSubscription;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -59,37 +62,40 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
     _errorMessage = widget.error;
 
-    ref.listen<AuthState>(authStateProvider, (previous, next) {
-      if (!mounted) return;
+    _authStateSubscription = ref.listenManual<AuthState>(
+      authStateProvider,
+      (previous, next) {
+        if (!mounted) return;
 
-      if (next is AuthLoading) {
-        setState(() {
-          _isLoading = true;
-          _errorMessage = null;
-        });
-        return;
-      }
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (next is AuthError) {
-        setState(() {
-          _errorMessage = next.message;
-        });
-        _bounceController.forward().then((_) {
-          _bounceController.reverse();
-        });
-      }
-
-      if (next is AuthAuthenticated) {
-        final current = ModalRoute.of(context)?.settings.name;
-        if (current != '/') {
-          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        if (next is AuthLoading) {
+          setState(() {
+            _isLoading = true;
+            _errorMessage = null;
+          });
+          return;
         }
-      }
-    });
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (next is AuthError) {
+          setState(() {
+            _errorMessage = next.message;
+          });
+          _bounceController.forward().then((_) {
+            _bounceController.reverse();
+          });
+        }
+
+        if (next is AuthAuthenticated) {
+          final current = ModalRoute.of(context)?.settings.name;
+          if (current != '/') {
+            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -104,6 +110,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
 
   @override
   void dispose() {
+    _authStateSubscription?.close();
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
@@ -205,6 +212,19 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final intensity = switch (width) {
+      <= 380 => 0.82,
+      >= 520 => 1.0,
+      _ => 0.82 + (width - 380) * (1.0 - 0.82) / (520 - 380),
+    };
+    final tintStrength = 0.12 * intensity;
+    final blobBlurSigma = switch (width) {
+      <= 380 => 30.0,
+      >= 520 => 40.0,
+      _ => 30.0 + (width - 380) * (40.0 - 30.0) / (520 - 380),
+    };
+
     final authState = ref.watch(authStateProvider);
 
     if (authState is AuthLoading || authState is AuthInitial) {
@@ -216,7 +236,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
               ),
-              SizedBox(height: 2.h),
+              const SizedBox(height: 16),
               Text('Loading...', style: theme.textTheme.bodyLarge),
             ],
           ),
@@ -224,139 +244,228 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
       );
     }
 
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: 4.h),
-                  const AuthHeaderWidget(isSignUpMode: true),
-                  SizedBox(height: 4.h),
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: EdgeInsets.all(3.w),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: theme.colorScheme.error.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          CustomIconWidget(
-                            iconName: 'error_outline',
-                            color: theme.colorScheme.error,
-                            size: 20,
-                          ),
-                          SizedBox(width: 2.w),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.error,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                  ],
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: AuthFormWidget(
-                      formKey: _formKey,
-                      isSignUpMode: true,
-                      nameController: _nameController,
-                      emailController: _emailController,
-                      passwordController: _passwordController,
-                      isPasswordVisible: _isPasswordVisible,
-                      onPasswordVisibilityToggle: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                      onForgotPassword: () {},
-                    ),
-                  ),
-                  SizedBox(height: 3.h),
-                  SizedBox(
-                    height: 6.h,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignUp,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  theme.colorScheme.onPrimary,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              'Sign up',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.onPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                  SizedBox(height: 3.h),
-                  _buildDivider(theme),
-                  SizedBox(height: 3.h),
-                  SocialLoginWidget(
-                    onGoogleSignIn: _handleGoogleSignIn,
-                    onAppleSignIn: _handleAppleSignIn,
-                    isLoading: _isLoading,
-                  ),
-                  SizedBox(height: 4.h),
-                  Center(
-                    child: GestureDetector(
-                      onTap: _goToSignIn,
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Have an account? ',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'Log in',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  theme.colorScheme.surface,
+                  Color.lerp(
+                        theme.colorScheme.surfaceContainerHighest,
+                        theme.colorScheme.primary,
+                        tintStrength,
+                      ) ??
+                      theme.colorScheme.surfaceContainerHighest,
                 ],
               ),
             ),
           ),
-        ),
+          Positioned(
+            top: -140,
+            left: -140,
+            child: _BlurBlob(
+              size: 320,
+              blurSigma: blobBlurSigma,
+              colors: [
+                theme.colorScheme.primary.withValues(alpha: 0.42 * intensity),
+                theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.18 * intensity,
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: -180,
+            right: -180,
+            child: _BlurBlob(
+              size: 380,
+              blurSigma: blobBlurSigma,
+              colors: [
+                theme.colorScheme.secondary.withValues(alpha: 0.26 * intensity),
+                theme.colorScheme.primary.withValues(alpha: 0.14 * intensity),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 140,
+            right: -120,
+            child: _BlurBlob(
+              size: 240,
+              blurSigma: blobBlurSigma,
+              colors: [
+                theme.colorScheme.tertiary.withValues(alpha: 0.18 * intensity),
+                theme.colorScheme.secondaryContainer.withValues(
+                  alpha: 0.10 * intensity,
+                ),
+              ],
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 24,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 32,
+                                offset: const Offset(0, 18),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const AuthHeaderWidget(isSignUpMode: true),
+                              const SizedBox(height: 24),
+                              if (_errorMessage != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: theme.colorScheme.error.withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CustomIconWidget(
+                                        iconName: 'error_outline',
+                                        color: theme.colorScheme.error,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.error,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: AuthFormWidget(
+                                  formKey: _formKey,
+                                  isSignUpMode: true,
+                                  nameController: _nameController,
+                                  emailController: _emailController,
+                                  passwordController: _passwordController,
+                                  isPasswordVisible: _isPasswordVisible,
+                                  onPasswordVisibilityToggle: () {
+                                    setState(() {
+                                      _isPasswordVisible = !_isPasswordVisible;
+                                    });
+                                  },
+                                  onForgotPassword: () {},
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _handleSignUp,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor: theme.colorScheme.onPrimary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 6,
+                                    shadowColor: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                  ),
+                                  child: _isLoading
+                                      ? SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              theme.colorScheme.onPrimary,
+                                            ),
+                                          ),
+                                        )
+                                      : Text(
+                                          'Sign up',
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            color: theme.colorScheme.onPrimary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              _buildDivider(theme),
+                              const SizedBox(height: 24),
+                              SocialLoginWidget(
+                                onGoogleSignIn: _handleGoogleSignIn,
+                                onAppleSignIn: _handleAppleSignIn,
+                                isLoading: _isLoading,
+                              ),
+                              const SizedBox(height: 24),
+                              Center(
+                                child: GestureDetector(
+                                  onTap: _goToSignIn,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      text: 'Have an account? ',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Log in',
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -368,7 +477,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
           child: Divider(color: theme.colorScheme.outline, thickness: 1),
         ),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4.w),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             'Or',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -380,6 +489,35 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen>
           child: Divider(color: theme.colorScheme.outline, thickness: 1),
         ),
       ],
+    );
+  }
+}
+
+class _BlurBlob extends StatelessWidget {
+  const _BlurBlob({required this.size, required this.colors, this.blurSigma = 40});
+
+  final double size;
+  final List<Color> colors;
+  final double blurSigma;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: colors,
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
