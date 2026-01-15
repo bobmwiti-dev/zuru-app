@@ -4,7 +4,6 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../domain/models/auth_user.dart';
 import '../../core/exceptions/firebase_exceptions.dart';
 import '../../core/exceptions/app_exception.dart';
-import '../../app/config/environment.dart';
 import '../models/user_model.dart';
 import 'user_repository.dart';
 
@@ -43,27 +42,6 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser> signIn(String email, String password) async {
-    // Check if we're in development with placeholder Firebase config
-    final firebaseConfig = Environment.config.firebaseConfig;
-    if (Environment.isDevelopment &&
-        (firebaseConfig.apiKey.contains('dev-api-key') ||
-            firebaseConfig.apiKey.contains('DUMMY') ||
-            firebaseConfig.apiKey == 'prod-api-key-here')) {
-      // Simulate successful signin for development
-      await Future.delayed(
-        const Duration(seconds: 1),
-      ); // Simulate network delay
-
-      return AuthUser(
-        id: 'dev-user-${DateTime.now().millisecondsSinceEpoch}',
-        email: email,
-        name: 'Dev User',
-        avatarUrl: null,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        lastLoginAt: DateTime.now(),
-      );
-    }
-
     try {
       final result = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -85,41 +63,6 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser> signUp(String email, String password, String name) async {
-    // Check if we're in development with placeholder Firebase config
-    final firebaseConfig = Environment.config.firebaseConfig;
-    if (Environment.isDevelopment &&
-        (firebaseConfig.apiKey.contains('dev-api-key') ||
-            firebaseConfig.apiKey.contains('DUMMY') ||
-            firebaseConfig.apiKey == 'prod-api-key-here')) {
-      // Simulate successful signup for development
-      await Future.delayed(
-        const Duration(seconds: 1),
-      ); // Simulate network delay
-
-      final userId = 'dev-user-${DateTime.now().millisecondsSinceEpoch}';
-
-      // Create user profile in Firestore
-      final userProfile = UserModel(
-        id: userId,
-        email: email,
-        displayName: name,
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-      );
-
-      final userRepository = UserRepository();
-      await userRepository.createOrUpdateUserProfile(userProfile);
-
-      return AuthUser(
-        id: userId,
-        email: email,
-        name: name,
-        avatarUrl: null,
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-      );
-    }
-
     try {
       final result = await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
