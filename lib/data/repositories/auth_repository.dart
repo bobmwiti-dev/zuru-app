@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../domain/models/auth_user.dart';
@@ -88,7 +91,15 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       final userRepository = UserRepository();
-      await userRepository.createOrUpdateUserProfile(userProfile);
+      try {
+        await userRepository
+            .createOrUpdateUserProfile(userProfile)
+            .timeout(const Duration(seconds: 15));
+      } on TimeoutException catch (e) {
+        if (kDebugMode) {
+          debugPrint('Timed out creating user profile after sign-up: $e');
+        }
+      }
 
       return AuthUser(
         id: userId,

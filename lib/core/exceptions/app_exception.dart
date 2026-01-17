@@ -186,8 +186,8 @@ class ServerException extends AppException {
 }
 
 /// Firebase-related exceptions
-class FirebaseException extends AppException {
-  const FirebaseException({
+class FirebaseServiceException extends AppException {
+  const FirebaseServiceException({
     required super.message,
     super.code,
     super.originalException,

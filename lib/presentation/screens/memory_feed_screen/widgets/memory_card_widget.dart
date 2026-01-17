@@ -459,6 +459,7 @@ class MemoryCardWidget extends StatefulWidget {
                           ),
                         ),
                       _buildCaption(theme, captionText),
+                      _buildEntryBadges(theme),
                       _buildMeta(theme),
                       SizedBox(height: 1.h),
                       Divider(
@@ -473,6 +474,93 @@ class MemoryCardWidget extends StatefulWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEntryBadges(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final hasCollection = (widget.journal.collection ?? '').trim().isNotEmpty;
+    final isReview = (widget.journal.entryType ?? '').toLowerCase() == 'review';
+    final rating = widget.journal.reviewRating;
+    final cost = widget.journal.reviewCostTier;
+
+    if (!hasCollection && !isReview) {
+      return const SizedBox.shrink();
+    }
+
+    String? costLabel;
+    if (cost == 1) costLabel = r'$';
+    if (cost == 2) costLabel = r'$$';
+    if (cost == 3) costLabel = r'$$$';
+
+    return Padding(
+      padding: EdgeInsets.only(left: 4.w, right: 4.w, top: 0.75.h),
+      child: Wrap(
+        spacing: 2.w,
+        runSpacing: 0.8.h,
+        children: [
+          if (hasCollection)
+            _pill(
+              theme,
+              icon: Icons.collections_bookmark_outlined,
+              label: widget.journal.collection!.trim(),
+              background: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.55,
+              ),
+              foreground: colorScheme.onSurface,
+            ),
+          if (isReview && rating != null)
+            _pill(
+              theme,
+              icon: Icons.star_rounded,
+              label: rating.toStringAsFixed(1),
+              background: Colors.amber.withValues(alpha: 0.18),
+              foreground: Colors.amber.shade800,
+            ),
+          if (isReview && costLabel != null)
+            _pill(
+              theme,
+              icon: Icons.payments_outlined,
+              label: costLabel,
+              background: colorScheme.primary.withValues(alpha: 0.12),
+              foreground: colorScheme.primary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(
+    ThemeData theme, {
+    required IconData icon,
+    required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 2.5.w, vertical: 0.6.h),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: foreground.withValues(alpha: 0.22),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foreground),
+          SizedBox(width: 1.2.w),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

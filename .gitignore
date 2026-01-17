@@ -140,3 +140,4 @@ GoogleService-Info.plist
 *.env.*
 secrets.json
 config/production.json
+firebase_web_defines.json

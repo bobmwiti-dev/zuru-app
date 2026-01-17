@@ -8,15 +8,36 @@ class JournalModel extends Equatable {
   final String title;
   final String? content;
   final String? mood;
+
   final double? latitude;
   final double? longitude;
   final String? locationName;
+  final String? locationCity;
+  final String? locationCountry;
+  final String? locationCountryCode;
+  final String? locationAdminArea;
+  final String? locationSubLocality;
+  final String? locationAddress;
+  final String? locationSource;
   final List<String> photos;
   final List<String> tags;
+  final String? collection;
+  final String? entryType;
+  final double? reviewRating;
+  final int? reviewCostTier;
+  final List<String> reviewVibes;
+  final bool? reviewWouldReturn;
+  final List<String> reviewHighlights;
+  final String? reviewTips;
   final int likesCount;
   final int savesCount;
   final bool isPublic;
   final bool isDeleted;
+  final List<String> captionSuggestions;
+  final List<String> highlightSuggestions;
+  final String? selectedCaption;
+  final DateTime? suggestionsGeneratedAt;
+  final String? suggestionsSource;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? deletedAt;
@@ -26,16 +47,37 @@ class JournalModel extends Equatable {
     required this.userId,
     required this.title,
     this.content,
+
     this.mood,
     this.latitude,
     this.longitude,
     this.locationName,
+    this.locationCity,
+    this.locationCountry,
+    this.locationCountryCode,
+    this.locationAdminArea,
+    this.locationSubLocality,
+    this.locationAddress,
+    this.locationSource,
     this.photos = const [],
     this.tags = const [],
+    this.collection,
+    this.entryType,
+    this.reviewRating,
+    this.reviewCostTier,
+    this.reviewVibes = const [],
+    this.reviewWouldReturn,
+    this.reviewHighlights = const [],
+    this.reviewTips,
     this.likesCount = 0,
     this.savesCount = 0,
     this.isPublic = false,
     this.isDeleted = false,
+    this.captionSuggestions = const [],
+    this.highlightSuggestions = const [],
+    this.selectedCaption,
+    this.suggestionsGeneratedAt,
+    this.suggestionsSource,
     required this.createdAt,
     this.updatedAt,
     this.deletedAt,
@@ -51,16 +93,41 @@ class JournalModel extends Equatable {
       userId: json['userId'] as String,
       title: json['title'] as String,
       content: json['content'] as String?,
+
       mood: json['mood'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       locationName: json['locationName'] as String?,
+      locationCity: json['locationCity'] as String?,
+      locationCountry: json['locationCountry'] as String?,
+      locationCountryCode: json['locationCountryCode'] as String?,
+      locationAdminArea: json['locationAdminArea'] as String?,
+      locationSubLocality: json['locationSubLocality'] as String?,
+      locationAddress: json['locationAddress'] as String?,
+      locationSource: json['locationSource'] as String?,
       photos: (json['photos'] as List<dynamic>?)?.cast<String>() ?? [],
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      collection: json['collection'] as String?,
+      entryType: json['entryType'] as String?,
+      reviewRating: (json['reviewRating'] as num?)?.toDouble(),
+      reviewCostTier: (json['reviewCostTier'] as num?)?.toInt(),
+      reviewVibes: (json['reviewVibes'] as List<dynamic>?)?.cast<String>() ?? [],
+      reviewWouldReturn: json['reviewWouldReturn'] as bool?,
+      reviewHighlights:
+          (json['reviewHighlights'] as List<dynamic>?)?.cast<String>() ?? [],
+      reviewTips: json['reviewTips'] as String?,
       likesCount: (json['likesCount'] as num?)?.toInt() ?? legacyLikedBy,
       savesCount: (json['savesCount'] as num?)?.toInt() ?? legacySavedBy,
       isPublic: json['isPublic'] as bool? ?? false,
       isDeleted: json['isDeleted'] as bool? ?? false,
+      captionSuggestions:
+          (json['captionSuggestions'] as List<dynamic>?)?.cast<String>() ?? [],
+      highlightSuggestions:
+          (json['highlightSuggestions'] as List<dynamic>?)?.cast<String>() ?? [],
+      selectedCaption: json['selectedCaption'] as String?,
+      suggestionsGeneratedAt:
+          (json['suggestionsGeneratedAt'] as Timestamp?)?.toDate(),
+      suggestionsSource: json['suggestionsSource'] as String?,
       createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (json['updatedAt'] as Timestamp?)?.toDate(),
       deletedAt: (json['deletedAt'] as Timestamp?)?.toDate(),
@@ -73,17 +140,40 @@ class JournalModel extends Equatable {
       if (id != null) 'id': id,
       'userId': userId,
       'title': title,
+
       if (content != null) 'content': content,
       if (mood != null) 'mood': mood,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (locationName != null) 'locationName': locationName,
+      if (locationCity != null) 'locationCity': locationCity,
+      if (locationCountry != null) 'locationCountry': locationCountry,
+      if (locationCountryCode != null) 'locationCountryCode': locationCountryCode,
+      if (locationAdminArea != null) 'locationAdminArea': locationAdminArea,
+      if (locationSubLocality != null) 'locationSubLocality': locationSubLocality,
+      if (locationAddress != null) 'locationAddress': locationAddress,
+      if (locationSource != null) 'locationSource': locationSource,
       'photos': photos,
       'tags': tags,
+      if (collection != null) 'collection': collection,
+      if (entryType != null) 'entryType': entryType,
+      if (reviewRating != null) 'reviewRating': reviewRating,
+      if (reviewCostTier != null) 'reviewCostTier': reviewCostTier,
+      if (reviewVibes.isNotEmpty) 'reviewVibes': reviewVibes,
+      if (reviewWouldReturn != null) 'reviewWouldReturn': reviewWouldReturn,
+      if (reviewHighlights.isNotEmpty) 'reviewHighlights': reviewHighlights,
+      if (reviewTips != null) 'reviewTips': reviewTips,
       'likesCount': likesCount,
       'savesCount': savesCount,
       'isPublic': isPublic,
       'isDeleted': isDeleted,
+      if (captionSuggestions.isNotEmpty) 'captionSuggestions': captionSuggestions,
+      if (highlightSuggestions.isNotEmpty)
+        'highlightSuggestions': highlightSuggestions,
+      if (selectedCaption != null) 'selectedCaption': selectedCaption,
+      if (suggestionsGeneratedAt != null)
+        'suggestionsGeneratedAt': Timestamp.fromDate(suggestionsGeneratedAt!),
+      if (suggestionsSource != null) 'suggestionsSource': suggestionsSource,
       'createdAt': Timestamp.fromDate(createdAt),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
       if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
@@ -97,15 +187,36 @@ class JournalModel extends Equatable {
     String? title,
     String? content,
     String? mood,
+
     double? latitude,
     double? longitude,
     String? locationName,
+    String? locationCity,
+    String? locationCountry,
+    String? locationCountryCode,
+    String? locationAdminArea,
+    String? locationSubLocality,
+    String? locationAddress,
+    String? locationSource,
     List<String>? photos,
     List<String>? tags,
+    String? collection,
+    String? entryType,
+    double? reviewRating,
+    int? reviewCostTier,
+    List<String>? reviewVibes,
+    bool? reviewWouldReturn,
+    List<String>? reviewHighlights,
+    String? reviewTips,
     int? likesCount,
     int? savesCount,
     bool? isPublic,
     bool? isDeleted,
+    List<String>? captionSuggestions,
+    List<String>? highlightSuggestions,
+    String? selectedCaption,
+    DateTime? suggestionsGeneratedAt,
+    String? suggestionsSource,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? deletedAt,
@@ -115,16 +226,37 @@ class JournalModel extends Equatable {
       userId: userId ?? this.userId,
       title: title ?? this.title,
       content: content ?? this.content,
+
       mood: mood ?? this.mood,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       locationName: locationName ?? this.locationName,
+      locationCity: locationCity ?? this.locationCity,
+      locationCountry: locationCountry ?? this.locationCountry,
+      locationCountryCode: locationCountryCode ?? this.locationCountryCode,
+      locationAdminArea: locationAdminArea ?? this.locationAdminArea,
+      locationSubLocality: locationSubLocality ?? this.locationSubLocality,
+      locationAddress: locationAddress ?? this.locationAddress,
+      locationSource: locationSource ?? this.locationSource,
       photos: photos ?? this.photos,
       tags: tags ?? this.tags,
+      collection: collection ?? this.collection,
+      entryType: entryType ?? this.entryType,
+      reviewRating: reviewRating ?? this.reviewRating,
+      reviewCostTier: reviewCostTier ?? this.reviewCostTier,
+      reviewVibes: reviewVibes ?? this.reviewVibes,
+      reviewWouldReturn: reviewWouldReturn ?? this.reviewWouldReturn,
+      reviewHighlights: reviewHighlights ?? this.reviewHighlights,
+      reviewTips: reviewTips ?? this.reviewTips,
       likesCount: likesCount ?? this.likesCount,
       savesCount: savesCount ?? this.savesCount,
       isPublic: isPublic ?? this.isPublic,
       isDeleted: isDeleted ?? this.isDeleted,
+      captionSuggestions: captionSuggestions ?? this.captionSuggestions,
+      highlightSuggestions: highlightSuggestions ?? this.highlightSuggestions,
+      selectedCaption: selectedCaption ?? this.selectedCaption,
+      suggestionsGeneratedAt: suggestionsGeneratedAt ?? this.suggestionsGeneratedAt,
+      suggestionsSource: suggestionsSource ?? this.suggestionsSource,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -159,12 +291,32 @@ class JournalModel extends Equatable {
         latitude,
         longitude,
         locationName,
+        locationCity,
+        locationCountry,
+        locationCountryCode,
+        locationAdminArea,
+        locationSubLocality,
+        locationAddress,
+        locationSource,
         photos,
         tags,
+        collection,
+        entryType,
+        reviewRating,
+        reviewCostTier,
+        reviewVibes,
+        reviewWouldReturn,
+        reviewHighlights,
+        reviewTips,
         likesCount,
         savesCount,
         isPublic,
         isDeleted,
+        captionSuggestions,
+        highlightSuggestions,
+        selectedCaption,
+        suggestionsGeneratedAt,
+        suggestionsSource,
         createdAt,
         updatedAt,
         deletedAt,

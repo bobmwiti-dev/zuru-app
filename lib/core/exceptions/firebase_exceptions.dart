@@ -1,9 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'app_exception.dart';
 
 /// Firebase-specific exception handling
 class FirebaseExceptions {
   static AppException handleFirebaseException(dynamic error) {
     // Handle Firebase Auth exceptions
+    if (error is FirebaseAuthException) {
+      return _handleAuthException(error);
+    }
+
     if (error.toString().contains('firebase_auth')) {
       return _handleAuthException(error);
     }
@@ -19,7 +25,7 @@ class FirebaseExceptions {
     }
 
     // Generic Firebase exception
-    return FirebaseException(
+    return FirebaseServiceException(
       message: 'Firebase operation failed',
       code: 'firebase_unknown',
       originalException: error,
@@ -27,6 +33,95 @@ class FirebaseExceptions {
   }
 
   static AppException _handleAuthException(dynamic error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'user-not-found':
+          return AuthenticationException(
+            message: 'No account found with this email address',
+            code: error.code,
+            originalException: error,
+          );
+        case 'wrong-password':
+          return AuthenticationException(
+            message: 'Incorrect password',
+            code: error.code,
+            originalException: error,
+          );
+        case 'email-already-in-use':
+          return AuthenticationException(
+            message: 'An account with this email already exists',
+            code: error.code,
+            originalException: error,
+          );
+        case 'weak-password':
+          return AuthenticationException(
+            message: 'Password is too weak. Please choose a stronger password',
+            code: error.code,
+            originalException: error,
+          );
+        case 'invalid-email':
+          return AuthenticationException(
+            message: 'Please enter a valid email address',
+            code: error.code,
+            originalException: error,
+          );
+        case 'user-disabled':
+          return AuthenticationException(
+            message: 'This account has been disabled',
+            code: error.code,
+            originalException: error,
+          );
+        case 'too-many-requests':
+          return AuthenticationException(
+            message: 'Too many failed attempts. Please try again later',
+            code: error.code,
+            originalException: error,
+          );
+        case 'operation-not-allowed':
+          return AuthenticationException(
+            message:
+                'This sign-in method is not enabled. Enable Email/Password in Firebase Authentication settings.',
+            code: error.code,
+            originalException: error,
+          );
+        case 'unauthorized-domain':
+          return AuthenticationException(
+            message:
+                'This web domain is not authorized for Firebase Authentication. Add localhost to Authorized domains in Firebase Console.',
+            code: error.code,
+            originalException: error,
+          );
+        case 'invalid-api-key':
+          return AuthenticationException(
+            message:
+                'Invalid Firebase API key. Check your FIREBASE_API_KEY web configuration.',
+            code: error.code,
+            originalException: error,
+          );
+        case 'app-not-authorized':
+          return AuthenticationException(
+            message:
+                'This app is not authorized to use Firebase Authentication. Verify your Firebase project configuration.',
+            code: error.code,
+            originalException: error,
+          );
+        case 'network-request-failed':
+          return AuthenticationException(
+            message: 'Network connection failed. Please check your internet and try again.',
+            code: 'network-error',
+            originalException: error,
+          );
+        default:
+          return AuthenticationException(
+            message: error.message?.isNotEmpty == true
+                ? error.message!
+                : 'Authentication failed. Please try again',
+            code: error.code,
+            originalException: error,
+          );
+      }
+    }
+
     final errorString = error.toString().toLowerCase();
 
     if (errorString.contains('user-not-found')) {
@@ -96,7 +191,7 @@ class FirebaseExceptions {
     final errorString = error.toString().toLowerCase();
 
     if (errorString.contains('permission-denied')) {
-      return FirebaseException(
+      return FirebaseServiceException(
         message: 'You don\'t have permission to perform this action',
         code: 'permission-denied',
         originalException: error,
@@ -104,7 +199,7 @@ class FirebaseExceptions {
     }
 
     if (errorString.contains('not-found')) {
-      return FirebaseException(
+      return FirebaseServiceException(
         message: 'The requested data was not found',
         code: 'document-not-found',
         originalException: error,
@@ -112,7 +207,7 @@ class FirebaseExceptions {
     }
 
     if (errorString.contains('already-exists')) {
-      return FirebaseException(
+      return FirebaseServiceException(
         message: 'This item already exists',
         code: 'document-already-exists',
         originalException: error,
@@ -120,7 +215,7 @@ class FirebaseExceptions {
     }
 
     if (errorString.contains('resource-exhausted')) {
-      return FirebaseException(
+      return FirebaseServiceException(
         message: 'Service temporarily unavailable. Please try again later',
         code: 'resource-exhausted',
         originalException: error,
@@ -135,7 +230,7 @@ class FirebaseExceptions {
       );
     }
 
-    return FirebaseException(
+    return FirebaseServiceException(
       message: 'Database operation failed',
       code: 'firestore_unknown',
       originalException: error,

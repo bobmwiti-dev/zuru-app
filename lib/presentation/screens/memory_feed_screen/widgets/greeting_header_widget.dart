@@ -21,15 +21,22 @@ class GreetingHeaderWidget extends StatelessWidget {
     final greeting = _getGreeting(now.hour);
 
     return Container(
+      margin: EdgeInsets.fromLTRB(4.w, 1.5.h, 4.w, 1.h),
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outline,
-            width: 0.5,
-          ),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.16),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

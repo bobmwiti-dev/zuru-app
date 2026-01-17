@@ -65,6 +65,16 @@ class ErrorMapper {
         return 'Too many failed attempts. Please wait a few minutes and try again.';
       case 'network-error':
         return 'Network connection failed. Please check your internet and try again.';
+      case 'operation-not-allowed':
+        return 'Email/Password sign-in is not enabled for this Firebase project.';
+      case 'unauthorized-domain':
+        return 'This web domain is not authorized for sign-in. Add localhost to Authorized domains in Firebase Console.';
+      case 'invalid-api-key':
+        return 'Firebase web configuration is invalid. Check your FIREBASE_API_KEY and related --dart-define values.';
+      case 'app-not-authorized':
+        return 'This app is not authorized to use Firebase Authentication. Verify your Firebase project configuration.';
+      case 'firebase_config_error':
+        return 'Firebase is not properly configured. Please check your Firebase project settings.';
       case 'google_signin_cancelled':
         return 'Login cancelled.';
       case 'google_signin_failed':

@@ -153,18 +153,23 @@ class _CustomButtonState extends State<CustomButton>
     super.dispose();
   }
 
-  void _handleTapDown(TapDownDetails details) {
+  bool get _isInteractive => !widget.isLoading && widget.onPressed != null;
+
+  void _handlePressDown() {
+    if (!_isInteractive) return;
     if (widget.enableHaptics) {
       AnimationUtils.lightImpact();
     }
     _animationController.forward();
   }
 
-  void _handleTapUp(TapUpDetails details) {
+  void _handlePressUp() {
+    if (!_isInteractive) return;
     _animationController.reverse();
   }
 
-  void _handleTapCancel() {
+  void _handlePressCancel() {
+    if (!_isInteractive) return;
     _animationController.reverse();
   }
 
@@ -180,25 +185,32 @@ class _CustomButtonState extends State<CustomButton>
       builder: (context, child) {
         return Transform.scale(
           scale: _scaleAnimation.value,
-          child: SizedBox(
-            width: widget.width ?? (widget.isFullWidth ? double.infinity : null),
-            height: widget.height ?? config.height,
-            child: ElevatedButton(
-              onPressed: widget.isLoading ? null : widget.onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: config.backgroundColor,
-                foregroundColor: config.foregroundColor,
-                elevation: config.elevation,
-                shadowColor: config.shadowColor,
-                padding: config.padding,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(config.borderRadius),
-                  side: config.borderSide ?? BorderSide.none,
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => _handlePressDown(),
+            onPointerUp: (_) => _handlePressUp(),
+            onPointerCancel: (_) => _handlePressCancel(),
+            child: SizedBox(
+              width:
+                  widget.width ?? (widget.isFullWidth ? double.infinity : null),
+              height: widget.height ?? config.height,
+              child: ElevatedButton(
+                onPressed: widget.isLoading ? null : widget.onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: config.backgroundColor,
+                  foregroundColor: config.foregroundColor,
+                  elevation: config.elevation,
+                  shadowColor: config.shadowColor,
+                  padding: config.padding,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(config.borderRadius),
+                    side: config.borderSide ?? BorderSide.none,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                child: _buildButtonContent(config),
               ),
-              child: _buildButtonContent(config),
             ),
           ),
         );
@@ -254,12 +266,7 @@ class _CustomButtonState extends State<CustomButton>
       return content;
     }
 
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      child: content,
-    );
+    return content;
   }
 
   _ButtonConfig _getButtonConfig(ThemeData theme) {

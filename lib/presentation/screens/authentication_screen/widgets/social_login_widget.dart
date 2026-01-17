@@ -54,7 +54,7 @@ class SocialLoginWidget extends StatelessWidget {
             context: context,
             label: 'Continue with Apple',
             icon: _BrandIcon(
-              assetPath: 'assets/icons/apple.png',
+              assetPath: '',
               fallbackIcon: FontAwesomeIcons.apple,
               size: 18,
               fallbackColor: buttonText,
@@ -220,6 +220,11 @@ class _BrandIconState extends State<_BrandIcon> {
   @override
   void initState() {
     super.initState();
+    if (widget.assetPath.trim().isEmpty) {
+      _existsFuture = Future.value(false);
+      return;
+    }
+
     _existsFuture = rootBundle
         .load(widget.assetPath)
         .then((_) => true)

@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/app_export.dart';
+import '../../../data/models/journal_model.dart';
+import '../../../data/repositories/journal_repository.dart';
 import './widgets/map_controls_widget.dart';
 import './widgets/memory_list_bottom_sheet_widget.dart';
 import './widgets/memory_preview_card_widget.dart';
@@ -28,107 +30,40 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  final JournalRepository _journalRepository = JournalRepository();
+  bool _didInitArgs = false;
+  LatLng? _initialCenter;
+  String? _initialSelectedEntryId;
+
   // Nairobi coordinates as default center
   static const LatLng _nairobiCenter = LatLng(-1.2921, 36.8219);
 
-  // Mock memory data with locations in Nairobi
-  final List<MemoryData> _memories = [
-    MemoryData(
-      id: '1',
-      title: 'Coffee at Java House',
-      description: 'Amazing cappuccino and great ambiance for journaling',
-      mood: 'Happy',
-      moodColor: Color(0xFFF4E4BC),
-      location: LatLng(-1.2864, 36.8172),
-      locationName: 'Java House, Westlands',
-      date: DateTime(2025, 11, 28),
-      imageUrl:
-          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800',
-      semanticLabel:
-          'Steaming cup of cappuccino with latte art on wooden table in cozy cafe',
-      companions: ['Sarah', 'Mike'],
-    ),
-    MemoryData(
-      id: '2',
-      title: 'Sunset at Karura Forest',
-      description: 'Peaceful evening walk through the forest trails',
-      mood: 'Calm',
-      moodColor: Color(0xFF2D7D7D),
-      location: LatLng(-1.2421, 36.8370),
-      locationName: 'Karura Forest',
-      date: DateTime(2025, 11, 27),
-      imageUrl:
-          'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800',
-      semanticLabel:
-          'Golden sunset filtering through tall trees in lush green forest',
-      companions: [],
-    ),
-    MemoryData(
-      id: '3',
-      title: 'Art Exhibition at National Museum',
-      description: 'Inspiring contemporary African art showcase',
-      mood: 'Excited',
-      moodColor: Color(0xFFE8B4B8),
-      location: LatLng(-1.2674, 36.8172),
-      locationName: 'National Museum of Kenya',
-      date: DateTime(2025, 11, 26),
-      imageUrl:
-          'https://images.unsplash.com/photo-1577083552431-6e5fd01988ec?w=800',
-      semanticLabel:
-          'Colorful abstract paintings displayed on white gallery walls with spotlights',
-      companions: ['Alex'],
-    ),
-    MemoryData(
-      id: '4',
-      title: 'Lunch at Mama Oliech',
-      description: 'Delicious traditional fish and ugali',
-      mood: 'Happy',
-      moodColor: Color(0xFFF4E4BC),
-      location: LatLng(-1.2921, 36.8219),
-      locationName: 'Mama Oliech Restaurant',
-      date: DateTime(2025, 11, 25),
-      imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
-      semanticLabel:
-          'Traditional African meal with grilled fish and white ugali on ceramic plate',
-      companions: ['Family'],
-    ),
-    MemoryData(
-      id: '5',
-      title: 'Morning Jog at Uhuru Park',
-      description: 'Refreshing start to the day with city views',
-      mood: 'Excited',
-      moodColor: Color(0xFFE8B4B8),
-      location: LatLng(-1.2833, 36.8167),
-      locationName: 'Uhuru Park',
-      date: DateTime(2025, 11, 24),
-      imageUrl:
-          'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800',
-      semanticLabel:
-          'Early morning view of park with joggers on path and city skyline in background',
-      companions: [],
-    ),
-    MemoryData(
-      id: '6',
-      title: 'Shopping at Sarit Centre',
-      description: 'Found some great books and had ice cream',
-      mood: 'Happy',
-      moodColor: Color(0xFFF4E4BC),
-      location: LatLng(-1.2615, 36.7879),
-      locationName: 'Sarit Centre',
-      date: DateTime(2025, 11, 23),
-      imageUrl:
-          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
-      semanticLabel:
-          'Modern shopping mall interior with bright lighting and retail stores',
-      companions: ['Emma'],
-    ),
-  ];
+  final List<MemoryData> _memories = [];
 
   @override
   void initState() {
     super.initState();
     _initializeMap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitArgs) return;
+    _didInitArgs = true;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      final lat = (args['centerLatitude'] as num?)?.toDouble();
+      final lng = (args['centerLongitude'] as num?)?.toDouble();
+      final selectedId = args['selectedEntryId']?.toString();
+      if (lat != null && lng != null) {
+        _initialCenter = LatLng(lat, lng);
+      }
+      if (selectedId != null && selectedId.trim().isNotEmpty) {
+        _initialSelectedEntryId = selectedId;
+      }
+    }
   }
 
   @override
@@ -152,6 +87,8 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
         _currentPosition = await Geolocator.getCurrentPosition();
       }
 
+      await _loadMemoriesFromFirestore();
+
       // Create markers for memories
       _createMarkers();
 
@@ -159,6 +96,86 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loadMemoriesFromFirestore() async {
+    final uid = _journalRepository.currentUserId;
+    if (uid == null) return;
+
+    try {
+      final journals = await _journalRepository.getUserJournals(
+        userId: uid,
+        limit: 250,
+      );
+
+      final mapped = <MemoryData>[];
+      for (final j in journals) {
+        if (j.latitude == null || j.longitude == null) continue;
+
+        final id = (j.id ?? '').trim();
+        if (id.isEmpty) continue;
+
+        final imageUrl =
+            j.photos.isNotEmpty && j.photos.first.trim().isNotEmpty
+                ? j.photos.first
+                : 'assets/images/no-image.jpg';
+
+        mapped.add(
+          MemoryData(
+            id: id,
+            title: j.title,
+            description: j.content ?? '',
+            mood: (j.mood ?? '').trim().isNotEmpty ? j.mood!.trim() : 'Memory',
+            moodColor: _moodColorFor(j.mood),
+            location: LatLng(j.latitude!, j.longitude!),
+            locationName: _formatLocationForMemory(j),
+            date: j.createdAt,
+            imageUrl: imageUrl,
+            semanticLabel: j.title,
+            companions: const [],
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _memories
+          ..clear()
+          ..addAll(mapped);
+
+        if (_initialSelectedEntryId != null) {
+          final match = _memories
+              .where((m) => m.id == _initialSelectedEntryId)
+              .cast<MemoryData?>()
+              .firstOrNull;
+          _selectedMemory = match;
+        }
+      });
+    } catch (_) {
+      // Ignore map load errors - UI still should show map
+    }
+  }
+
+  String _formatLocationForMemory(JournalModel j) {
+    final name = (j.locationName ?? '').trim();
+    if (name.isNotEmpty) return name;
+
+    final city = (j.locationCity ?? '').trim();
+    final country = (j.locationCountry ?? '').trim();
+    if (city.isNotEmpty && country.isNotEmpty) return '$city, $country';
+    if (city.isNotEmpty) return city;
+    if (country.isNotEmpty) return country;
+    return 'Unknown location';
+  }
+
+  Color _moodColorFor(String? mood) {
+    final m = (mood ?? '').toLowerCase();
+    if (m.contains('happy')) return const Color(0xFFF4E4BC);
+    if (m.contains('calm')) return const Color(0xFF2D7D7D);
+    if (m.contains('excited')) return const Color(0xFFE8B4B8);
+    if (m.contains('sad')) return const Color(0xFF6C7A89);
+    if (m.contains('angry')) return const Color(0xFFE57373);
+    return Colors.blueGrey;
   }
 
   void _createMarkers() {
@@ -200,6 +217,18 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    _tryCenterOnSelected();
+  }
+
+  Future<void> _tryCenterOnSelected() async {
+    if (_mapController == null) return;
+    if (_selectedMemory == null) return;
+
+    await _mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: _selectedMemory!.location, zoom: 16.0),
+      ),
+    );
   }
 
   Future<void> _goToCurrentLocation() async {
@@ -287,12 +316,14 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
                 GoogleMap(
                   onMapCreated: _onMapCreated,
                   initialCameraPosition: CameraPosition(
-                    target: _currentPosition != null
-                        ? LatLng(
-                            _currentPosition!.latitude,
-                            _currentPosition!.longitude,
-                          )
-                        : _nairobiCenter,
+                    target:
+                        _initialCenter ??
+                        (_currentPosition != null
+                            ? LatLng(
+                                _currentPosition!.latitude,
+                                _currentPosition!.longitude,
+                              )
+                            : _nairobiCenter),
                     zoom: 12.0,
                   ),
                   markers: _markers,
@@ -393,7 +424,7 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
                         Navigator.pushNamed(
                           context,
                           '/journal-detail-screen',
-                          arguments: _selectedMemory,
+                          arguments: {'memoryId': _selectedMemory!.id},
                         );
                       },
                       onClose: () {

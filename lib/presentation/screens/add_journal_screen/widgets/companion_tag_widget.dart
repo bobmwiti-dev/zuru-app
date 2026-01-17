@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
-import '../../../../widgets/custom_icon_widget.dart';
 
 /// Companion tagging widget for adding friends
 class CompanionTagWidget extends StatefulWidget {
@@ -59,6 +58,7 @@ class _CompanionTagWidgetState extends State<CompanionTagWidget> {
   void _addCompanion(String name) {
     if (name.trim().isEmpty || widget.companions.contains(name)) return;
 
+    AnimationUtils.selectionClick();
     final updatedCompanions = List<String>.from(widget.companions)..add(name);
     widget.onCompanionsChanged(updatedCompanions);
     _companionController.clear();
@@ -66,6 +66,7 @@ class _CompanionTagWidgetState extends State<CompanionTagWidget> {
   }
 
   void _removeCompanion(String name) {
+    AnimationUtils.selectionClick();
     final updatedCompanions = List<String>.from(widget.companions)
       ..remove(name);
     widget.onCompanionsChanged(updatedCompanions);
@@ -79,7 +80,10 @@ class _CompanionTagWidgetState extends State<CompanionTagWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          onTap: () {
+            AnimationUtils.selectionClick();
+            setState(() => _isExpanded = !_isExpanded);
+          },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -107,15 +111,24 @@ class _CompanionTagWidgetState extends State<CompanionTagWidget> {
             ],
           ),
         ),
-        if (_isExpanded) ...[
-          SizedBox(height: 1.5.h),
-          _buildCompanionInput(theme),
-          if (_filteredContacts.isNotEmpty) _buildSuggestions(theme),
-          if (widget.companions.isNotEmpty) ...[
-            SizedBox(height: 1.5.h),
-            _buildCompanionChips(theme),
-          ],
-        ],
+        AnimatedSize(
+          duration: AnimationUtils.medium,
+          curve: AnimationUtils.fastOutSlowIn,
+          child:
+              _isExpanded
+                  ? Column(
+                    children: [
+                      SizedBox(height: 1.5.h),
+                      _buildCompanionInput(theme),
+                      if (_filteredContacts.isNotEmpty) _buildSuggestions(theme),
+                      if (widget.companions.isNotEmpty) ...[
+                        SizedBox(height: 1.5.h),
+                        _buildCompanionChips(theme),
+                      ],
+                    ],
+                  )
+                  : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -154,6 +167,13 @@ class _CompanionTagWidgetState extends State<CompanionTagWidget> {
           color: theme.colorScheme.outline.withValues(alpha: 0.3),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: ListView.separated(
         shrinkWrap: true,
