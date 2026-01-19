@@ -9,6 +9,10 @@ class JournalModel extends Equatable {
   final String? content;
   final String? mood;
 
+  final String? voiceNoteUrl;
+  final int? voiceNoteDurationMs;
+  final String? voiceNoteMimeType;
+
   final double? latitude;
   final double? longitude;
   final String? locationName;
@@ -49,6 +53,9 @@ class JournalModel extends Equatable {
     this.content,
 
     this.mood,
+    this.voiceNoteUrl,
+    this.voiceNoteDurationMs,
+    this.voiceNoteMimeType,
     this.latitude,
     this.longitude,
     this.locationName,
@@ -95,6 +102,9 @@ class JournalModel extends Equatable {
       content: json['content'] as String?,
 
       mood: json['mood'] as String?,
+      voiceNoteUrl: json['voiceNoteUrl'] as String?,
+      voiceNoteDurationMs: (json['voiceNoteDurationMs'] as num?)?.toInt(),
+      voiceNoteMimeType: json['voiceNoteMimeType'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       locationName: json['locationName'] as String?,
@@ -143,6 +153,9 @@ class JournalModel extends Equatable {
 
       if (content != null) 'content': content,
       if (mood != null) 'mood': mood,
+      if (voiceNoteUrl != null) 'voiceNoteUrl': voiceNoteUrl,
+      if (voiceNoteDurationMs != null) 'voiceNoteDurationMs': voiceNoteDurationMs,
+      if (voiceNoteMimeType != null) 'voiceNoteMimeType': voiceNoteMimeType,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (locationName != null) 'locationName': locationName,
@@ -188,6 +201,10 @@ class JournalModel extends Equatable {
     String? content,
     String? mood,
 
+    String? voiceNoteUrl,
+    int? voiceNoteDurationMs,
+    String? voiceNoteMimeType,
+
     double? latitude,
     double? longitude,
     String? locationName,
@@ -228,6 +245,9 @@ class JournalModel extends Equatable {
       content: content ?? this.content,
 
       mood: mood ?? this.mood,
+      voiceNoteUrl: voiceNoteUrl ?? this.voiceNoteUrl,
+      voiceNoteDurationMs: voiceNoteDurationMs ?? this.voiceNoteDurationMs,
+      voiceNoteMimeType: voiceNoteMimeType ?? this.voiceNoteMimeType,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       locationName: locationName ?? this.locationName,
@@ -288,6 +308,9 @@ class JournalModel extends Equatable {
         title,
         content,
         mood,
+        voiceNoteUrl,
+        voiceNoteDurationMs,
+        voiceNoteMimeType,
         latitude,
         longitude,
         locationName,

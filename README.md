@@ -1,21 +1,48 @@
-<<<<<<< HEAD
-# Zuru-app
+# Zuru
+
 Zuru is a personal experience journaling app that allows users to document, relive, and reflect on their life experiences — such as visiting parks, attending events, exploring cafes, or discovering hangouts — through photos, videos, notes, moods, and location tagging.
-=======
-# zuru_app
 
-A new Flutter project.
+## Development
 
-## Getting Started
+### Prerequisites
 
-This project is a starting point for a Flutter application.
+- Flutter SDK
+- A Firebase project (for Auth / Firestore / Storage)
 
-A few resources to get you started if this is your first Flutter project:
+### Run
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
->>>>>>> e60ed71 (Initial commit with basic app structure)
+### Run on Web (Chrome) with Firebase
+
+This app expects Firebase Web configuration at runtime using `--dart-define` (see `lib/main.dart`).
+
+1) Create a local (untracked) defines file:
+
+- Copy the example file:
+
+```bash
+cp firebase_web_defines.example.json firebase_web_defines.json
+```
+
+PowerShell:
+
+```powershell
+Copy-Item firebase_web_defines.example.json firebase_web_defines.json
+```
+
+- Fill in your Firebase Web values in `firebase_web_defines.json`.
+
+2) Run:
+
+```bash
+flutter run -d chrome --dart-define-from-file=firebase_web_defines.json
+```
+
+Notes:
+
+- `firebase_web_defines.json` is intentionally gitignored.
+- Do not commit real Firebase keys or `.env` secrets.

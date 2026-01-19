@@ -6,7 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
@@ -83,6 +86,18 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
   String? _selectedCaption;
   bool _isGeneratingSuggestions = false;
 
+  final AudioRecorder _voiceRecorder = AudioRecorder();
+  final AudioPlayer _voicePlayer = AudioPlayer();
+  StreamSubscription<PlayerState>? _voicePlayerSubscription;
+
+  String? _voiceNoteUrl;
+  String? _voiceNoteLocalPath;
+  int? _voiceNoteDurationMs;
+  bool _voiceNoteMarkedForRemoval = false;
+  bool _isRecordingVoiceNote = false;
+  bool _isPlayingVoiceNote = false;
+  DateTime? _voiceNoteRecordingStartedAt;
+
   static const List<String> _reviewVibeOptions = [
     'Cozy',
     'Luxury',
@@ -116,6 +131,90 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCollectionSuggestions();
     });
+
+    _voicePlayerSubscription = _voicePlayer.playerStateStream.listen((state) {
+      final playing = state.playing;
+      if (!mounted) return;
+      setState(() => _isPlayingVoiceNote = playing);
+    });
+  }
+
+  Widget _buildVoiceNoteSection(ThemeData theme) {
+    if (!_isAndroidVoiceEnabled) return const SizedBox.shrink();
+
+    final hasVoice =
+        (_voiceNoteLocalPath != null && _voiceNoteLocalPath!.trim().isNotEmpty) ||
+        (_voiceNoteUrl != null && _voiceNoteUrl!.trim().isNotEmpty);
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CustomIconWidget(
+                iconName: 'mic',
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              SizedBox(width: 2.w),
+              Expanded(
+                child: Text(
+                  'Voice Note',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (hasVoice)
+                IconButton(
+                  onPressed: _removeVoiceNote,
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 1.2.h),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _isRecordingVoiceNote
+                      ? _stopVoiceRecording
+                      : _startVoiceRecording,
+                  icon: Icon(
+                    _isRecordingVoiceNote
+                        ? Icons.stop
+                        : Icons.fiber_manual_record,
+                  ),
+                  label: Text(_isRecordingVoiceNote ? 'Stop' : 'Record'),
+                ),
+              ),
+              SizedBox(width: 2.w),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed:
+                      hasVoice && !_isRecordingVoiceNote ? _toggleVoicePlayback : null,
+                  icon: Icon(_isPlayingVoiceNote ? Icons.pause : Icons.play_arrow),
+                  label: Text(_isPlayingVoiceNote ? 'Pause' : 'Play'),
+                ),
+              ),
+            ],
+          ),
+          if (_voiceNoteDurationMs != null) ...[
+            SizedBox(height: 1.h),
+            Text(
+              '${(_voiceNoteDurationMs! / 1000).toStringAsFixed(1)}s',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -162,6 +261,11 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         _highlightSuggestions = List<String>.from(journal.highlightSuggestions);
         _selectedCaption = journal.selectedCaption;
 
+        _voiceNoteUrl = journal.voiceNoteUrl;
+        _voiceNoteLocalPath = null;
+        _voiceNoteDurationMs = journal.voiceNoteDurationMs;
+        _voiceNoteMarkedForRemoval = false;
+
         _locationName = journal.locationName;
         _locationController.text = journal.locationName ?? '';
 
@@ -178,6 +282,120 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         }
       }
     }
+  }
+
+  bool get _isAndroidVoiceEnabled {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  }
+
+  Future<void> _startVoiceRecording() async {
+    if (!_isAndroidVoiceEnabled || _isRecordingVoiceNote) return;
+
+    final micStatus = await Permission.microphone.request();
+    if (!micStatus.isGranted) {
+      _showPermissionDialog('Microphone');
+      return;
+    }
+
+    try {
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _voiceRecorder.start(
+        RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: path,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isRecordingVoiceNote = true;
+        _voiceNoteLocalPath = path;
+        _voiceNoteDurationMs = null;
+        _voiceNoteMarkedForRemoval = false;
+        _voiceNoteRecordingStartedAt = DateTime.now();
+      });
+    } catch (e) {
+      debugPrint('Voice record start error: $e');
+      _showErrorSnackBar('Unable to start recording');
+    }
+  }
+
+  Future<void> _stopVoiceRecording() async {
+    if (!_isAndroidVoiceEnabled || !_isRecordingVoiceNote) return;
+
+    try {
+      final stoppedPath = await _voiceRecorder.stop();
+      final start = _voiceNoteRecordingStartedAt;
+      final durationMs = start == null
+          ? null
+          : DateTime.now().difference(start).inMilliseconds;
+
+      if (!mounted) return;
+      setState(() {
+        _isRecordingVoiceNote = false;
+        if (stoppedPath != null && stoppedPath.trim().isNotEmpty) {
+          _voiceNoteLocalPath = stoppedPath;
+        }
+        _voiceNoteDurationMs = durationMs;
+        _voiceNoteRecordingStartedAt = null;
+      });
+    } catch (e) {
+      debugPrint('Voice record stop error: $e');
+      _showErrorSnackBar('Unable to stop recording');
+    }
+  }
+
+  Future<void> _toggleVoicePlayback() async {
+    if (!_isAndroidVoiceEnabled) return;
+
+    try {
+      if (_isPlayingVoiceNote) {
+        await _voicePlayer.pause();
+        return;
+      }
+
+      if (_isRecordingVoiceNote) {
+        await _stopVoiceRecording();
+      }
+
+      final localPath = _voiceNoteLocalPath;
+      final url = _voiceNoteUrl;
+      if ((localPath == null || localPath.trim().isEmpty) &&
+          (url == null || url.trim().isEmpty)) {
+        return;
+      }
+
+      if (localPath != null && localPath.trim().isNotEmpty) {
+        await _voicePlayer.setFilePath(localPath);
+      } else if (url != null && url.trim().isNotEmpty) {
+        await _voicePlayer.setUrl(url);
+      }
+
+      await _voicePlayer.play();
+    } catch (e) {
+      debugPrint('Voice playback error: $e');
+      _showErrorSnackBar('Unable to play voice note');
+    }
+  }
+
+  Future<void> _removeVoiceNote() async {
+    try {
+      await _voicePlayer.stop();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _voiceNoteLocalPath = null;
+      _voiceNoteUrl = null;
+      _voiceNoteDurationMs = null;
+      _voiceNoteMarkedForRemoval = true;
+      _isRecordingVoiceNote = false;
+      _isPlayingVoiceNote = false;
+      _voiceNoteRecordingStartedAt = null;
+    });
   }
 
   List<String> _generateCaptionSuggestions() {
@@ -464,6 +682,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
   @override
   void dispose() {
+    _voicePlayerSubscription?.cancel();
+    _voicePlayer.dispose();
+    _voiceRecorder.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
@@ -752,7 +973,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
   bool _isFormValid() {
     return _titleController.text.trim().isNotEmpty &&
         (_capturedImage != null || _existingPhotoUrls.isNotEmpty ||
-            _descriptionController.text.trim().isNotEmpty);
+            _descriptionController.text.trim().isNotEmpty ||
+            (_voiceNoteLocalPath != null && _voiceNoteLocalPath!.trim().isNotEmpty) ||
+            (_voiceNoteUrl != null && _voiceNoteUrl!.trim().isNotEmpty));
   }
 
   /// Save journal entry
@@ -814,6 +1037,43 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
         debugPrint('Photo upload skipped on web due to Storage configuration.');
       }
 
+      String? voiceNoteUrl = _voiceNoteMarkedForRemoval ? null : _voiceNoteUrl;
+      int? voiceNoteDurationMs = _voiceNoteMarkedForRemoval ? null : _voiceNoteDurationMs;
+      bool voiceUploadFailed = false;
+
+      if (_isAndroidVoiceEnabled &&
+          !_voiceNoteMarkedForRemoval &&
+          _voiceNoteLocalPath != null &&
+          _voiceNoteLocalPath!.trim().isNotEmpty) {
+        try {
+          final bytes = await XFile(_voiceNoteLocalPath!).readAsBytes();
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_voice_note.m4a';
+
+          voiceNoteUrl = await _firebaseStorageDataSource
+              .uploadData(
+                path: 'journal_voice_notes',
+                data: bytes,
+                userId: userId,
+                fileName: fileName,
+                contentType: 'audio/mp4',
+              )
+              .timeout(const Duration(seconds: 40));
+
+          _voiceNoteLocalPath = null;
+        } on TimeoutException catch (e) {
+          voiceUploadFailed = true;
+          voiceNoteUrl = null;
+          voiceNoteDurationMs = null;
+          debugPrint('Voice note upload timeout: $e');
+        } catch (e) {
+          voiceUploadFailed = true;
+          voiceNoteUrl = null;
+          voiceNoteDurationMs = null;
+          debugPrint('Voice note upload error: $e');
+        }
+      }
+
       final collection = _collectionController.text.trim().isNotEmpty
           ? _collectionController.text.trim()
           : null;
@@ -832,6 +1092,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                   ? _descriptionController.text.trim()
                   : null,
           'mood': _selectedMood,
+          'voiceNoteUrl': voiceNoteUrl,
+          'voiceNoteDurationMs': voiceNoteDurationMs,
+          'voiceNoteMimeType': voiceNoteUrl != null ? 'audio/mp4' : null,
           'latitude': _currentPosition?.latitude ?? _editingJournal?.latitude,
           'longitude': _currentPosition?.longitude ?? _editingJournal?.longitude,
           'locationName': locationName,
@@ -886,6 +1149,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                   ? _descriptionController.text.trim()
                   : null,
           mood: _selectedMood,
+          voiceNoteUrl: voiceNoteUrl,
+          voiceNoteDurationMs: voiceNoteDurationMs,
+          voiceNoteMimeType: voiceNoteUrl != null ? 'audio/mp4' : null,
           latitude: _currentPosition?.latitude,
           longitude: _currentPosition?.longitude,
           locationName: locationName,
@@ -940,6 +1206,9 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                 ? 'Photo upload failed (browser CORS). Saved entry without photo.'
                 : 'Photo upload failed. Saved entry without photo.',
           );
+        }
+        if (voiceUploadFailed) {
+          _showErrorSnackBar('Voice note upload failed. Saved entry without voice note.');
         }
         Navigator.pop(context, true);
       }
@@ -1435,23 +1704,31 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
                     SizedBox(height: 2.h),
 
-                    if (_entryType == 'review') ...[
+                    if (_isAndroidVoiceEnabled) ...[
                       _buildAnimatedSection(
                         index: 5,
+                        child: _buildVoiceNoteSection(theme),
+                      ),
+                      SizedBox(height: 2.h),
+                    ],
+
+                    if (_entryType == 'review') ...[
+                      _buildAnimatedSection(
+                        index: _isAndroidVoiceEnabled ? 6 : 5,
                         child: _buildReviewSection(theme),
                       ),
                       SizedBox(height: 2.h),
                     ],
 
                     _buildAnimatedSection(
-                      index: 6,
+                      index: _isAndroidVoiceEnabled ? 7 : 6,
                       child: _buildSuggestionsSection(theme),
                     ),
 
                     SizedBox(height: 2.h),
 
                     _buildAnimatedSection(
-                      index: 7,
+                      index: _isAndroidVoiceEnabled ? 8 : 7,
                       child: _SectionCard(
                         child: MoodSelectorWidget(
                           selectedMood: _selectedMood,
@@ -1465,7 +1742,7 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                     SizedBox(height: 2.h),
 
                     _buildAnimatedSection(
-                      index: 8,
+                      index: _isAndroidVoiceEnabled ? 9 : 8,
                       child: _SectionCard(
                         child: CompanionTagWidget(
                           companions: _companions,
@@ -1479,14 +1756,14 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
                     SizedBox(height: 2.h),
 
                     _buildAnimatedSection(
-                      index: 9,
+                      index: _isAndroidVoiceEnabled ? 10 : 9,
                       child: _buildTagsSection(theme),
                     ),
 
                     SizedBox(height: 2.h),
 
                     _buildAnimatedSection(
-                      index: 10,
+                      index: _isAndroidVoiceEnabled ? 11 : 10,
                       child: _buildPrivacySection(theme),
                     ),
 

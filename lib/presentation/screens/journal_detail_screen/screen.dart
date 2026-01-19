@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/app_export.dart';
+import '../../../data/models/journal_model.dart';
 import './widgets/content_section.dart';
 import './widgets/hero_media_section.dart';
 import './widgets/location_map_section.dart';
@@ -19,8 +22,13 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showAppBarBackground = false;
 
+  final AudioPlayer _voicePlayer = AudioPlayer();
+  bool _isPlayingVoiceNote = false;
+  bool _didInitArgs = false;
+  JournalModel? _journalModel;
+
   // Mock journal entry data
-  final Map<String, dynamic> _journalEntry = {
+  Map<String, dynamic> _journalEntry = {
     'id': 1,
     'title': 'Sunset at Karura Forest',
     'description':
@@ -81,13 +89,143 @@ This place always reminds me why I love Nairobi. Despite being in the heart of t
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    _voicePlayer.playerStateStream.listen((state) {
+      if (!mounted) return;
+      setState(() => _isPlayingVoiceNote = state.playing);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitArgs) return;
+    _didInitArgs = true;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is JournalModel) {
+      _journalModel = args;
+      _journalEntry = _journalToEntryMap(args);
+    } else if (args is Map<String, dynamic>) {
+      _journalEntry = {..._journalEntry, ...args};
+    }
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _voicePlayer.dispose();
     super.dispose();
+  }
+
+  bool get _isAndroidVoiceEnabled {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  }
+
+  Map<String, dynamic> _journalToEntryMap(JournalModel journal) {
+    final photoUrl = journal.photos.isNotEmpty ? journal.photos.first : '';
+
+    return {
+      'id': journal.id ?? '',
+      'title': journal.title,
+      'description': journal.content ?? '',
+      'mood': journal.mood,
+      'location': journal.locationName,
+      'latitude': journal.latitude,
+      'longitude': journal.longitude,
+      'mediaType': photoUrl.isNotEmpty ? 'photo' : null,
+      'mediaUrl': photoUrl,
+      'timestamp': journal.createdAt,
+      'voiceNoteUrl': journal.voiceNoteUrl,
+      'voiceNoteDurationMs': journal.voiceNoteDurationMs,
+    };
+  }
+
+  Future<void> _toggleVoiceNotePlayback() async {
+    if (!_isAndroidVoiceEnabled) return;
+
+    final url = (_journalModel?.voiceNoteUrl ?? _journalEntry['voiceNoteUrl'] as String?)?.trim();
+    if (url == null || url.isEmpty) return;
+
+    try {
+      if (_isPlayingVoiceNote) {
+        await _voicePlayer.pause();
+        return;
+      }
+
+      await _voicePlayer.setUrl(url);
+      await _voicePlayer.play();
+    } catch (e) {
+      debugPrint('Voice note playback error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to play voice note at this moment'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildVoiceNoteSection(ThemeData theme) {
+    if (!_isAndroidVoiceEnabled) return const SizedBox.shrink();
+
+    final url = (_journalModel?.voiceNoteUrl ?? _journalEntry['voiceNoteUrl'] as String?)?.trim();
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+
+    final durationMs = _journalModel?.voiceNoteDurationMs ?? _journalEntry['voiceNoteDurationMs'] as int?;
+    final durationLabel = durationMs == null
+        ? null
+        : '${(durationMs / 1000).toStringAsFixed(1)}s';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          CustomIconWidget(
+            iconName: 'mic',
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Voice Note',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (durationLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      durationLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: _toggleVoiceNotePlayback,
+            icon: Icon(_isPlayingVoiceNote ? Icons.pause : Icons.play_arrow),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onScroll() {
@@ -128,11 +266,19 @@ Created with Zuru - Your moments matter''';
   }
 
   void _handleEdit() {
-    Navigator.pushNamed(
-      context,
-      '/add-journal-screen',
-      arguments: _journalEntry,
-    );
+    if (_journalModel != null) {
+      Navigator.pushNamed(
+        context,
+        '/add-journal-screen',
+        arguments: {
+          'mode': 'edit',
+          'journal': _journalModel,
+        },
+      );
+      return;
+    }
+
+    Navigator.pushNamed(context, '/add-journal-screen');
   }
 
   void _handleMapTap() {
@@ -206,6 +352,8 @@ Created with Zuru - Your moments matter''';
 
             // Content section
             ContentSection(journalEntry: _journalEntry),
+
+            _buildVoiceNoteSection(theme),
 
             // Location map section
             LocationMapSection(

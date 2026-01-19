@@ -1,0 +1,9 @@
+{
+  "FIREBASE_API_KEY": "PASTE_apiKey_here",
+  "FIREBASE_APP_ID": "PASTE_appId_here",
+  "FIREBASE_MESSAGING_SENDER_ID": "PASTE_messagingSenderId_here",
+  "FIREBASE_PROJECT_ID": "PASTE_projectId_here",
+  "FIREBASE_AUTH_DOMAIN": "PASTE_authDomain_here",
+  "FIREBASE_STORAGE_BUCKET": "PASTE_storageBucket_here",
+  "FIREBASE_MEASUREMENT_ID": "PASTE_measurementId_here"
+}
