@@ -97,26 +97,6 @@ class _AIInsightsScreenState extends State<AIInsightsScreen> {
 
   void _onBottomNavTap(int index) {
     setState(() => _currentBottomNavIndex = index);
-
-    switch (index) {
-      case 0: // Feed
-        Navigator.pushNamed(context, '/memory-feed-screen');
-        break;
-      case 1: // Friends
-        Navigator.pushNamed(context, '/friends-screen');
-        break;
-      case 2: // Map
-        Navigator.pushNamed(context, '/interactive-map-view');
-        break;
-      case 3: // Add
-        Navigator.pushNamed(context, '/add-journal-screen');
-        break;
-      case 4: // Analytics (current)
-        break;
-      case 5: // Profile
-        Navigator.pushNamed(context, '/profile-screen');
-        break;
-    }
   }
 
   void _refreshInsights() async {
