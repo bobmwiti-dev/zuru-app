@@ -22,7 +22,7 @@ class MoodAnalyticsScreen extends StatefulWidget {
 }
 
 class _MoodAnalyticsScreenState extends State<MoodAnalyticsScreen> {
-  int _currentBottomNavIndex = 3; // Analytics tab active
+  int _currentBottomNavIndex = 4; // Analytics tab active
   String _selectedPeriod = 'week'; // week, month, year
   bool _isLoading = false;
   DateTime _selectedCalendarDay = DateTime.now();

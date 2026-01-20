@@ -454,6 +454,48 @@ class JournalRepository extends FirestoreRepository {
     });
   }
 
+  Future<List<JournalModel>> getSavedJournals({
+    int limit = 60,
+  }) async {
+    return await executeOperation(() async {
+      final uid = currentUserId;
+      if (uid == null) {
+        throw AuthenticationException(message: 'User not authenticated');
+      }
+
+      final savedQuery = firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_savedJournalsSubcollection)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      final savedSnapshot = await savedQuery.get();
+      final ids = savedSnapshot.docs
+          .map((d) => d.id)
+          .where((id) => id.trim().isNotEmpty)
+          .toList();
+      if (ids.isEmpty) return <JournalModel>[];
+
+      final byId = <String, JournalModel>{};
+
+      for (final chunk in _chunksOf(ids, 10)) {
+        final snap = await firestore
+            .collection(_journalsCollection)
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+
+        for (final doc in snap.docs) {
+          final data = doc.data();
+          if (data['isDeleted'] == true) continue;
+          byId[doc.id] = JournalModel.fromJson({...data, 'id': doc.id});
+        }
+      }
+
+      return ids.map((id) => byId[id]).whereType<JournalModel>().toList();
+    });
+  }
+
   Iterable<List<T>> _chunksOf<T>(List<T> items, int size) sync* {
     for (var i = 0; i < items.length; i += size) {
       yield items.sublist(i, i + size > items.length ? items.length : i + size);
