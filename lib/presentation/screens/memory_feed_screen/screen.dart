@@ -1003,25 +1003,6 @@ class _MemoryFeedContentState extends State<_MemoryFeedContent> {
   /// Handle bottom navigation
   void _onBottomNavTap(int index) {
     setState(() => _currentBottomNavIndex = index);
-
-    switch (index) {
-      case 0: // Feed - already here
-        break;
-      case 1: // Friends
-        Navigator.pushNamed(context, '/friends-screen');
-        break;
-      case 2: // Map
-        Navigator.pushNamed(context, '/interactive-map-view');
-        break;
-      case 3: // Add (handled by FAB)
-        break;
-      case 4: // Analytics
-        Navigator.pushNamed(context, '/mood-analytics-screen');
-        break;
-      case 5: // Profile
-        Navigator.pushNamed(context, '/profile-screen');
-        break;
-    }
   }
 
   /// Navigate to journal detail
