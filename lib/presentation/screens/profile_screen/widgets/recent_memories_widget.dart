@@ -242,7 +242,7 @@ class RecentMemoriesWidget extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return InkWell(
-      onTap: () => _openMemoryDetail(context, journal.id!),
+      onTap: () => _openMemoryDetail(context, journal),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.all(3.w),
@@ -376,12 +376,11 @@ class RecentMemoriesWidget extends ConsumerWidget {
     Navigator.pushNamed(context, '/memory-feed-screen');
   }
 
-  void _openMemoryDetail(BuildContext context, String memoryId) {
-    // Navigate to journal detail screen
+  void _openMemoryDetail(BuildContext context, JournalModel journal) {
     Navigator.pushNamed(
       context,
       '/journal-detail-screen',
-      arguments: {'memoryId': memoryId},
+      arguments: journal,
     );
   }
 
