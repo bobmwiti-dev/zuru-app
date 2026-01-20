@@ -115,7 +115,7 @@ class CustomBottomBar extends StatelessWidget {
                   _navigationItems.length,
                   (index) {
                     // Skip center item if showing FAB
-                    if (showCenterButton && index == 2) {
+                    if (showCenterButton && index == 3) {
                       return const Spacer();
                     }
 
@@ -253,7 +253,7 @@ class CustomBottomBar extends StatelessWidget {
     if (index == currentIndex) return;
 
     // Skip center button in navigation items
-    if (showCenterButton && index == 2) return;
+    if (showCenterButton && index == 3) return;
 
     // Call the onTap callback
     onTap(index);
