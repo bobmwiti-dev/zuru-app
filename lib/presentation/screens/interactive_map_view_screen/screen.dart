@@ -30,6 +30,8 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  int _currentBottomNavIndex = 2;
+
   final JournalRepository _journalRepository = JournalRepository();
   bool _didInitArgs = false;
   LatLng? _initialCenter;
@@ -435,10 +437,8 @@ class _InteractiveMapViewState extends State<InteractiveMapView> {
               ],
             ),
       bottomNavigationBar: CustomBottomBar(
-        currentIndex: 1,
-        onTap: (index) {
-          // Handle navigation
-        },
+        currentIndex: _currentBottomNavIndex,
+        onTap: (index) => setState(() => _currentBottomNavIndex = index),
       ),
     );
   }
